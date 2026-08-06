@@ -1,0 +1,183 @@
+name: Bootstrap Atlas
+
+on:
+  push:
+    branches:
+      - agent/bootstrap-atlas
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      SUPABASE_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: agent/bootstrap-atlas
+          fetch-depth: 0
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.5 --activate
+          pnpm --version
+
+      - name: Create Atlas directory structure
+        run: |
+          mkdir -p \
+            src/modules/identity \
+            src/modules/projects \
+            src/modules/procurement \
+            src/modules/documents \
+            src/modules/notifications \
+            src/modules/audit \
+            src/platform/auth \
+            src/platform/database \
+            src/platform/events \
+            src/platform/storage \
+            src/platform/observability \
+            src/shared/domain \
+            src/shared/application \
+            src/shared/ui \
+            src/lib/supabase
+
+          touch \
+            src/modules/identity/.gitkeep \
+            src/modules/projects/.gitkeep \
+            src/modules/procurement/.gitkeep \
+            src/modules/documents/.gitkeep \
+            src/modules/notifications/.gitkeep \
+            src/modules/audit/.gitkeep \
+            src/platform/auth/.gitkeep \
+            src/platform/database/.gitkeep \
+            src/platform/events/.gitkeep \
+            src/platform/storage/.gitkeep \
+            src/platform/observability/.gitkeep \
+            src/shared/domain/.gitkeep \
+            src/shared/application/.gitkeep \
+            src/shared/ui/.gitkeep \
+            src/lib/supabase/.gitkeep
+
+      - name: Configure environment template and Git ignore rules
+        run: |
+          cat > .env.example <<'EOF'
+          NEXT_PUBLIC_SUPABASE_URL=
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+          SUPABASE_SERVICE_ROLE_KEY=
+          EOF
+
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = '.gitignore'
+          let content = fs.readFileSync(path, 'utf8')
+
+          if (!content.includes('!.env.example')) {
+            content = content.replace('.env*\n', '.env*\n!.env.example\n')
+          }
+
+          fs.writeFileSync(path, content)
+          NODE
+
+      - name: Install runtime dependencies
+        run: pnpm add @supabase/supabase-js @supabase/ssr zod
+
+      - name: Install development dependencies
+        run: pnpm add --save-dev vitest @vitest/coverage-v8 playwright supabase --allow-build=supabase
+
+      - name: Add test scripts
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+
+          packageJson.scripts = {
+            ...packageJson.scripts,
+            test: 'vitest run --passWithNoTests',
+            'test:coverage': 'vitest run --coverage --passWithNoTests'
+          }
+
+          fs.writeFileSync('package.json', `${JSON.stringify(packageJson, null, 2)}\n`)
+          NODE
+          pnpm install --lockfile-only
+
+      - name: Inspect Supabase CLI commands
+        run: |
+          pnpm exec supabase --version
+          pnpm exec supabase --help
+          pnpm exec supabase init --help
+          pnpm exec supabase start --help
+          pnpm exec supabase status --help
+
+      - name: Initialize Supabase locally
+        run: pnpm exec supabase init
+
+      - name: Verify restricted dependencies are absent
+        run: |
+          node <<'NODE'
+          const packageJson = require('./package.json')
+          const dependencies = {
+            ...packageJson.dependencies,
+            ...packageJson.devDependencies
+          }
+          const forbidden = ['prisma', '@prisma/client', 'drizzle-orm', 'redux', '@reduxjs/toolkit', '@nestjs/core']
+          const found = forbidden.filter((dependency) => dependency in dependencies)
+
+          if (found.length > 0) {
+            throw new Error(`Forbidden dependencies detected: ${found.join(', ')}`)
+          }
+          NODE
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run unit test bootstrap check
+        run: pnpm test
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Start Supabase local stack
+        run: pnpm exec supabase start
+
+      - name: Check Supabase local status
+        run: pnpm exec supabase status
+
+      - name: Stop Supabase local stack
+        if: always()
+        run: pnpm exec supabase stop || true
+
+      - name: Commit generated bootstrap
+        if: success()
+        run: |
+          git config user.name "atlas-bootstrap-bot"
+          git config user.email "atlas-bootstrap-bot@users.noreply.github.com"
+          git add \
+            .env.example \
+            .gitignore \
+            package.json \
+            pnpm-lock.yaml \
+            supabase \
+            src/modules \
+            src/platform \
+            src/shared \
+            src/lib/supabase
+
+          if git diff --cached --quiet; then
+            echo "No bootstrap changes to commit."
+            exit 0
+          fi
+
+          git commit -m "bootstrap Atlas foundation"
+          git push origin HEAD:agent/bootstrap-atlas
