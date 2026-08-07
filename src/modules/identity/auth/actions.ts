@@ -84,7 +84,7 @@ export async function signupAction(formData: FormData) {
       data: {
         full_name: parsed.data.fullName,
       },
-      emailRedirectTo: `${getApplicationUrl()}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${getApplicationUrl()}/auth/callback?next=/onboarding/company`,
     },
   })
 
@@ -95,7 +95,7 @@ export async function signupAction(formData: FormData) {
   revalidatePath('/', 'layout')
 
   if (data.session) {
-    redirect('/dashboard')
+    redirect('/onboarding/company')
   }
 
   redirectWithCode('/login', 'message', 'check_email')
