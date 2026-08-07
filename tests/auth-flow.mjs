@@ -62,8 +62,12 @@ try {
   await page.getByLabel('Password').fill('Wrong-Password-2026!')
   await page.getByRole('button', { name: 'Entrar' }).click()
   await expectPath(page, '/login')
-  await page.getByRole('alert').waitFor()
-  assert.match(await page.getByRole('alert').innerText(), /Email ou password inválidos/)
+  const applicationAlert = page.locator('main [role="alert"]')
+  await applicationAlert.waitFor()
+  assert.match(
+    await applicationAlert.innerText(),
+    /Email ou password inválidos/,
+  )
   assert.equal((await context.cookies()).filter(isAuthCookie).length, 0)
 
   // Valid login must create a server-side cookie session and open the dashboard.
