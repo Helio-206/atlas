@@ -45,7 +45,14 @@ function toProject(row: z.infer<typeof projectRowSchema>): Project {
 }
 
 function throwRepositoryError(error: { code?: string; message: string }): never {
-  throw new ProjectRepositoryError(error.code ?? 'unknown', error.message)
+  const code = error.code ?? 'unknown'
+
+  console.error('[projects] Supabase repository command failed', {
+    code,
+    message: error.message,
+  })
+
+  throw new ProjectRepositoryError(code, error.message)
 }
 
 export async function createProjectRepository(input: CreateProjectInput) {
