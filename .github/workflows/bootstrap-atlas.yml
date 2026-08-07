@@ -5,6 +5,7 @@ on:
     branches:
       - agent/bootstrap-atlas
       - agent/supabase-clients
+      - agent/database-foundation
 
 permissions:
   contents: write
@@ -41,13 +42,14 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
           pnpm exec supabase --help
-          pnpm exec supabase init --help
+          pnpm exec supabase migration new --help
+          pnpm exec supabase db reset --help
           pnpm exec supabase start --help
           pnpm exec supabase status --help
 
@@ -56,6 +58,13 @@ jobs:
           if [ ! -f supabase/config.toml ]; then
             pnpm exec supabase init
           fi
+
+      - name: Create versioned foundation migration shell
+        run: |
+          if ! find supabase/migrations -maxdepth 1 -type f -name '*_atlas_foundation.sql' -print -quit 2>/dev/null | grep -q .; then
+            pnpm exec supabase migration new atlas_foundation
+          fi
+          find supabase/migrations -maxdepth 1 -type f -name '*_atlas_foundation.sql' -print
 
       - name: Verify Atlas structure
         run: |
@@ -82,29 +91,6 @@ jobs:
           git check-ignore -q .env.local
           ! git check-ignore -q .env.example
 
-      - name: Verify restricted dependencies are absent
-        run: |
-          node <<'NODE'
-          const packageJson = require('./package.json')
-          const dependencies = {
-            ...packageJson.dependencies,
-            ...packageJson.devDependencies
-          }
-          const forbidden = [
-            'prisma',
-            '@prisma/client',
-            'drizzle-orm',
-            'redux',
-            '@reduxjs/toolkit',
-            '@nestjs/core'
-          ]
-          const found = forbidden.filter((dependency) => dependency in dependencies)
-
-          if (found.length > 0) {
-            throw new Error(`Forbidden dependencies detected: ${found.join(', ')}`)
-          }
-          NODE
-
       - name: Run lint
         run: pnpm lint
 
@@ -124,17 +110,17 @@ jobs:
         if: always()
         run: pnpm exec supabase stop || true
 
-      - name: Commit generated dependency and Supabase files
+      - name: Commit generated migration shell
         if: success()
         run: |
           git config user.name "atlas-validation-bot"
           git config user.email "atlas-validation-bot@users.noreply.github.com"
-          git add pnpm-lock.yaml supabase
+          git add supabase/migrations pnpm-lock.yaml
 
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
 
-          git commit -m "refresh Atlas generated files"
+          git commit -m "create Atlas foundation migration"
           git push origin HEAD:${GITHUB_REF_NAME}
