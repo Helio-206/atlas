@@ -22,7 +22,7 @@ BEGIN
     AND EXISTS (
       SELECT 1
       FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS setting
-      WHERE setting = 'search_path=' 
+      WHERE setting LIKE 'search_path=%'
     );
 
   IF internal_security_definer_count <> 4 THEN
@@ -47,7 +47,7 @@ BEGIN
     AND EXISTS (
       SELECT 1
       FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS setting
-      WHERE setting = 'search_path='
+      WHERE setting LIKE 'search_path=%'
     );
 
   IF public_security_invoker_count <> 7 THEN
@@ -279,7 +279,14 @@ END
 $$;
 
 -- A separate draft proves invalid state transitions.
-PERFORM public.create_project('A-DRAFT', 'Draft Transition Test', null, null, null, null);
+select public.create_project(
+  'A-DRAFT',
+  'Draft Transition Test',
+  null,
+  null,
+  null,
+  null
+);
 
 DO $$
 DECLARE
