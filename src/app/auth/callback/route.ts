@@ -7,6 +7,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 const RECOVERY_COOKIE = 'atlas-password-recovery'
 const ALLOWED_DESTINATIONS = new Set([
   '/dashboard',
+  '/onboarding/company',
   '/forgot-password?mode=reset',
 ])
 
