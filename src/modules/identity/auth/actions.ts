@@ -25,8 +25,10 @@ function redirectWithCode(
   type: 'error' | 'message',
   code: string,
 ): never {
-  const searchParams = new URLSearchParams({ [type]: code })
-  redirect(`${pathname}?${searchParams.toString()}`)
+  const [basePath, query = ''] = pathname.split('?')
+  const searchParams = new URLSearchParams(query)
+  searchParams.set(type, code)
+  redirect(`${basePath}?${searchParams.toString()}`)
 }
 
 function getApplicationUrl() {
