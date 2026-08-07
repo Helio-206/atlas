@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { shouldUseSecureCookies } from './cookie-security'
+
 const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup'])
 const PROTECTED_PREFIXES = ['/dashboard']
 
@@ -58,10 +60,7 @@ export async function updateSession(request: NextRequest) {
           response.cookies.set(name, value, {
             ...options,
             sameSite: options.sameSite ?? 'lax',
-            secure:
-              process.env.NODE_ENV === 'production'
-                ? true
-                : options.secure,
+            secure: shouldUseSecureCookies(),
           })
         })
 
