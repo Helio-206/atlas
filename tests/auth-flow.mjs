@@ -54,8 +54,12 @@ try {
   // Server-side Zod validation rejects a whitespace-only company name.
   await page.getByLabel('Nome da empresa').fill('  ')
   await page.getByRole('button', { name: 'Criar empresa e continuar' }).click()
-  await expectPath(page, '/onboarding/company')
-  assert.match(page.url(), /error=invalid_form/)
+  await page.waitForURL(
+    (url) =>
+      url.pathname === '/onboarding/company' &&
+      url.searchParams.get('error') === 'invalid_form',
+  )
+  assert.equal(new URL(page.url()).pathname, '/onboarding/company')
   const onboardingAlert = page.locator('main [role="alert"]')
   await onboardingAlert.waitFor()
   assert.match(await onboardingAlert.innerText(), /Verifique os dados da empresa/)
