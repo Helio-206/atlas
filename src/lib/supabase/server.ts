@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+import { shouldUseSecureCookies } from './cookie-security'
+
 function getServerEnvironment() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -35,10 +37,7 @@ export async function createServerSupabaseClient() {
             cookieStore.set(name, value, {
               ...options,
               sameSite: options.sameSite ?? 'lax',
-              secure:
-                process.env.NODE_ENV === 'production'
-                  ? true
-                  : options.secure,
+              secure: shouldUseSecureCookies(),
             })
           })
         } catch {
