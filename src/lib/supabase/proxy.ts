@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { shouldUseSecureCookies } from './cookie-security'
 
 const AUTH_ENTRY_ROUTES = new Set(['/login', '/signup'])
-const PROTECTED_PREFIXES = ['/dashboard']
+const PROTECTED_PREFIXES = ['/dashboard', '/onboarding']
 
 function getProxyEnvironment() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -38,6 +38,10 @@ function copyResponseState(source: NextResponse, target: NextResponse) {
   }
 
   return target
+}
+
+function matchesProtectedRoute(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
 }
 
 export async function updateSession(request: NextRequest) {
@@ -77,7 +81,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = !error && Boolean(data?.claims)
   const pathname = request.nextUrl.pathname
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix),
+    matchesProtectedRoute(pathname, prefix),
   )
 
   if (!isAuthenticated && isProtected) {
