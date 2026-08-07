@@ -41,7 +41,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --allow-build=supabase
+        run: pnpm install --no-frozen-lockfile
 
       - name: Inspect Supabase CLI commands
         run: |
