@@ -8,7 +8,7 @@ on:
       - agent/database-foundation
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atlas-${{ github.ref }}
@@ -47,47 +47,18 @@ jobs:
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
-          pnpm exec supabase --help
-          pnpm exec supabase migration new --help
+          pnpm exec supabase migration list --help
           pnpm exec supabase db reset --help
-          pnpm exec supabase start --help
-          pnpm exec supabase status --help
-
-      - name: Initialize Supabase locally
-        run: |
-          if [ ! -f supabase/config.toml ]; then
-            pnpm exec supabase init
-          fi
-
-      - name: Create versioned foundation migration shell
-        run: |
-          if ! find supabase/migrations -maxdepth 1 -type f -name '*_atlas_foundation.sql' -print -quit 2>/dev/null | grep -q .; then
-            pnpm exec supabase migration new atlas_foundation
-          fi
-          find supabase/migrations -maxdepth 1 -type f -name '*_atlas_foundation.sql' -print
+          pnpm exec supabase db lint --help
+          pnpm exec supabase db advisors --help
 
       - name: Verify Atlas structure
         run: |
           test -d src/app
-          test -d src/modules/identity
-          test -d src/modules/projects
-          test -d src/modules/procurement
-          test -d src/modules/documents
-          test -d src/modules/notifications
-          test -d src/modules/audit
-          test -d src/platform/auth
-          test -d src/platform/database
-          test -d src/platform/events
-          test -d src/platform/storage
-          test -d src/platform/observability
-          test -d src/shared/domain
-          test -d src/shared/application
-          test -d src/shared/ui
-          test -f src/lib/supabase/browser.ts
-          test -f src/lib/supabase/server.ts
-          test -f src/lib/supabase/admin.ts
-          test -f .env.example
+          test -d src/lib/supabase
           test -f supabase/config.toml
+          test -f supabase/migrations/20260807002224_atlas_foundation.sql
+          test -f supabase/tests/atlas_foundation.sql
           git check-ignore -q .env.local
           ! git check-ignore -q .env.example
 
@@ -103,24 +74,37 @@ jobs:
       - name: Start Supabase local stack
         run: pnpm exec supabase start
 
+      - name: Reset database from migrations
+        run: pnpm exec supabase db reset
+
+      - name: Verify local migration history
+        run: pnpm exec supabase migration list --local
+
+      - name: Verify schemas tables constraints and indexes
+        run: |
+          DB_CONTAINER=$(docker ps \
+            --filter "label=com.supabase.cli.project=atlas" \
+            --filter "name=supabase_db_" \
+            --format '{{.Names}}' | head -n 1)
+
+          test -n "$DB_CONTAINER"
+          docker exec -i "$DB_CONTAINER" \
+            psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            < supabase/tests/atlas_foundation.sql
+
+      - name: Lint database schemas
+        run: |
+          pnpm exec supabase db lint \
+            --local \
+            --schema identity,projects,audit,platform \
+            --fail-on error
+
+      - name: Run database advisors
+        run: pnpm exec supabase db advisors --local
+
       - name: Check Supabase local status
         run: pnpm exec supabase status
 
       - name: Stop Supabase local stack
         if: always()
         run: pnpm exec supabase stop || true
-
-      - name: Commit generated migration shell
-        if: success()
-        run: |
-          git config user.name "atlas-validation-bot"
-          git config user.email "atlas-validation-bot@users.noreply.github.com"
-          git add supabase/migrations pnpm-lock.yaml
-
-          if git diff --cached --quiet; then
-            echo "No generated changes to commit."
-            exit 0
-          fi
-
-          git commit -m "create Atlas foundation migration"
-          git push origin HEAD:${GITHUB_REF_NAME}
