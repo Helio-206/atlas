@@ -54,7 +54,10 @@ try {
     url.pathname === '/dashboard/projects/new' &&
     url.searchParams.get('error') === 'invalid_form',
   )
-  assert.match(await page.locator('[role="alert"]').innerText(), /Verifique os dados do projeto/)
+  assert.match(
+    await page.locator('main [role="alert"]').innerText(),
+    /Verifique os dados do projeto/,
+  )
 
   await page.getByLabel('Data final').fill('2026-12-20')
   await page.getByLabel('Cliente').fill('Cliente Browser')
