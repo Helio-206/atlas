@@ -70,10 +70,10 @@ export async function createProjectAction(formData: FormData) {
     redirect('/dashboard/projects/new?error=invalid_form')
   }
 
+  let projectId: string
+
   try {
-    const projectId = await CreateProject.execute(parsed.data)
-    revalidatePath('/dashboard/projects')
-    redirect(`/dashboard/projects/${projectId}?notice=created`)
+    projectId = await CreateProject.execute(parsed.data)
   } catch (error) {
     const message = repositoryMessage(error)
 
@@ -83,6 +83,9 @@ export async function createProjectAction(formData: FormData) {
 
     redirect('/dashboard/projects/new?error=creation_failed')
   }
+
+  revalidatePath('/dashboard/projects')
+  redirect(`/dashboard/projects/${projectId}?notice=created`)
 }
 
 export async function updateProjectAction(formData: FormData) {
@@ -104,12 +107,13 @@ export async function updateProjectAction(formData: FormData) {
 
   try {
     await UpdateProject.execute(parsed.data)
-    revalidatePath('/dashboard/projects')
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`)
-    redirect(`/dashboard/projects/${parsed.data.projectId}?notice=updated`)
   } catch (error) {
     projectErrorRedirect(parsed.data.projectId, error)
   }
+
+  revalidatePath('/dashboard/projects')
+  revalidatePath(`/dashboard/projects/${parsed.data.projectId}`)
+  redirect(`/dashboard/projects/${parsed.data.projectId}?notice=updated`)
 }
 
 async function transitionAction(
@@ -128,12 +132,13 @@ async function transitionAction(
 
   try {
     await command.execute(parsed.data)
-    revalidatePath('/dashboard/projects')
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`)
-    redirect(`/dashboard/projects/${parsed.data.projectId}?notice=${notice}`)
   } catch (error) {
     projectErrorRedirect(parsed.data.projectId, error)
   }
+
+  revalidatePath('/dashboard/projects')
+  revalidatePath(`/dashboard/projects/${parsed.data.projectId}`)
+  redirect(`/dashboard/projects/${parsed.data.projectId}?notice=${notice}`)
 }
 
 export async function activateProjectAction(formData: FormData) {
