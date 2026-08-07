@@ -192,6 +192,10 @@ jobs:
       - name: Verify Projects in browser
         run: pnpm test:projects:integration
 
+      - name: Show Atlas application log on browser failure
+        if: failure()
+        run: cat /tmp/atlas-app.log || true
+
       - name: Lint database schemas
         run: |
           pnpm exec supabase db lint \
