@@ -12,7 +12,7 @@ on:
       - agent/projects-module
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atlas-${{ github.ref }}
@@ -48,20 +48,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Projects migration shell with Supabase CLI
-        if: github.ref_name == 'agent/projects-module'
-        run: |
-          if compgen -G 'supabase/migrations/*_projects_module.sql' > /dev/null; then
-            exit 0
-          fi
-
-          pnpm exec supabase migration new projects_module
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add supabase/migrations/*_projects_module.sql
-          git commit -m 'generate projects module migration shell'
-          git push origin HEAD:${{ github.ref_name }}
-
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
@@ -71,7 +57,7 @@ jobs:
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
 
-      - name: Verify Atlas onboarding structure
+      - name: Verify Atlas projects structure
         run: |
           test -f src/proxy.ts
           test -f src/lib/supabase/proxy.ts
@@ -81,13 +67,28 @@ jobs:
           test -f src/app/auth/callback/route.ts
           test -f src/app/dashboard/page.tsx
           test -f src/app/onboarding/company/page.tsx
+          test -f src/app/dashboard/projects/page.tsx
+          test -f src/app/dashboard/projects/new/page.tsx
+          test -f 'src/app/dashboard/projects/[id]/page.tsx'
           test -f src/modules/identity/auth/actions.ts
           test -f src/modules/identity/company-onboarding/actions.ts
           test -f src/modules/identity/company-onboarding/queries.ts
           test -f src/modules/identity/company-onboarding/schemas.ts
+          test -f src/modules/projects/domain/project.ts
+          test -f src/modules/projects/domain/project.test.ts
+          test -f src/modules/projects/application/use-cases.ts
+          test -f src/modules/projects/infrastructure/project-repository.ts
+          test -f src/modules/projects/presentation/actions.ts
+          test -f src/modules/projects/presentation/access.ts
+          test -f src/modules/projects/presentation/feedback.ts
+          test -f src/modules/projects/presentation/project-components.tsx
+          test -f src/modules/projects/contracts/schemas.ts
           test -f supabase/migrations/20260807101645_company_onboarding.sql
+          test -f supabase/migrations/20260807113738_projects_module.sql
           test -f supabase/tests/company_onboarding.sql
+          test -f supabase/tests/projects_module.sql
           test -f tests/auth-flow.mjs
+          test -f tests/projects-flow.mjs
           grep -Fq 'schemas = ["public", "graphql_public", "identity"]' supabase/config.toml
           grep -q 'http://127.0.0.1:3000/\*\*' supabase/config.toml
           git check-ignore -q .env.local
@@ -97,12 +98,18 @@ jobs:
         run: |
           ! grep -R 'createAdminSupabaseClient' \
             src/app/login src/app/signup src/app/forgot-password \
-            src/app/auth src/app/onboarding src/modules/identity/auth \
-            src/modules/identity/company-onboarding tests/auth-flow.mjs
+            src/app/auth src/app/onboarding src/app/dashboard/projects \
+            src/modules/identity/auth src/modules/identity/company-onboarding \
+            src/modules/projects tests/auth-flow.mjs tests/projects-flow.mjs
           ! grep -R 'SUPABASE_SERVICE_ROLE_KEY' \
             src/app/login src/app/signup src/app/forgot-password \
-            src/app/auth src/app/onboarding src/modules/identity/auth \
-            src/modules/identity/company-onboarding tests/auth-flow.mjs
+            src/app/auth src/app/onboarding src/app/dashboard/projects \
+            src/modules/identity/auth src/modules/identity/company-onboarding \
+            src/modules/projects tests/auth-flow.mjs tests/projects-flow.mjs
+          ! grep -R 'company_id' \
+            src/modules/projects/presentation/actions.ts \
+            src/modules/projects/presentation/project-components.tsx \
+            tests/projects-flow.mjs
 
       - name: Run lint
         run: pnpm lint
@@ -132,7 +139,8 @@ jobs:
             supabase/tests/atlas_foundation.sql \
             supabase/tests/rls_isolation.sql \
             supabase/tests/auth_profile.sql \
-            supabase/tests/company_onboarding.sql
+            supabase/tests/company_onboarding.sql \
+            supabase/tests/projects_module.sql
           do
             docker exec -i "$DB_CONTAINER" \
               psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
@@ -180,6 +188,9 @@ jobs:
 
       - name: Verify authentication and onboarding in browser
         run: pnpm test:auth:integration
+
+      - name: Verify Projects in browser
+        run: pnpm test:projects:integration
 
       - name: Lint database schemas
         run: |
