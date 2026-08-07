@@ -215,7 +215,9 @@ INSERT INTO auth.users (
 INSERT INTO identity.profiles (id, full_name)
 VALUES
   ('10000000-0000-0000-0000-00000000000a', 'User A'),
-  ('10000000-0000-0000-0000-00000000000b', 'User B');
+  ('10000000-0000-0000-0000-00000000000b', 'User B')
+ON CONFLICT (id) DO UPDATE
+SET full_name = EXCLUDED.full_name;
 
 INSERT INTO identity.companies (id, name, tax_number, created_by)
 VALUES
