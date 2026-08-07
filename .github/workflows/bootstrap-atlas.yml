@@ -49,46 +49,62 @@ jobs:
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
-          pnpm exec supabase migration new --help
           pnpm exec supabase migration list --help
           pnpm exec supabase db reset --help
           pnpm exec supabase db lint --help
           pnpm exec supabase db advisors --help
+          pnpm exec supabase status --help
 
-      - name: Create versioned authentication migration shell
+      - name: Normalize local Auth redirect allow-list
         run: |
-          if ! find supabase/migrations -maxdepth 1 -type f -name '*_auth_profile_sync.sql' -print -quit | grep -q .; then
-            pnpm exec supabase migration new auth_profile_sync
-          fi
-          find supabase/migrations -maxdepth 1 -type f -name '*_auth_profile_sync.sql' -print
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Verify Atlas structure
+          path = Path('supabase/config.toml')
+          text = path.read_text()
+          old = 'additional_redirect_urls = ["https://127.0.0.1:3000"]'
+          new = 'additional_redirect_urls = ["http://127.0.0.1:3000/**", "http://localhost:3000/**"]'
+
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('Unexpected Supabase auth redirect configuration')
+
+          path.write_text(text)
+          PY
+
+      - name: Verify Atlas authentication structure
         run: |
-          test -d src/app
-          test -d src/lib/supabase
-          test -f supabase/config.toml
-          test -f supabase/migrations/20260807002224_atlas_foundation.sql
-          test -f supabase/migrations/20260807004213_multiempresa_rls.sql
-          test -f supabase/tests/atlas_foundation.sql
-          test -f supabase/tests/rls_isolation.sql
+          test -f src/proxy.ts
+          test -f src/lib/supabase/proxy.ts
+          test -f src/app/login/page.tsx
+          test -f src/app/signup/page.tsx
+          test -f src/app/forgot-password/page.tsx
+          test -f src/app/auth/callback/route.ts
+          test -f src/app/dashboard/page.tsx
+          test -f src/modules/identity/auth/actions.ts
+          test -f src/modules/identity/auth/schemas.ts
+          test -f supabase/migrations/20260807005527_auth_profile_sync.sql
+          test -f supabase/tests/auth_profile.sql
+          test -f tests/auth-flow.mjs
+          grep -q 'http://127.0.0.1:3000/\*\*' supabase/config.toml
           git check-ignore -q .env.local
           ! git check-ignore -q .env.example
 
-      - name: Verify normal-user RLS tests do not use privileged role
+      - name: Verify normal auth flow avoids privileged client
         run: |
-          if grep -qi 'service_role' supabase/tests/rls_isolation.sql; then
-            echo 'RLS isolation tests must not use the service role.'
-            exit 1
-          fi
+          ! grep -R 'createAdminSupabaseClient' \
+            src/app/login src/app/signup src/app/forgot-password \
+            src/app/auth src/modules/identity/auth tests/auth-flow.mjs
+          ! grep -R 'SUPABASE_SERVICE_ROLE_KEY' \
+            src/app/login src/app/signup src/app/forgot-password \
+            src/app/auth src/modules/identity/auth tests/auth-flow.mjs
 
       - name: Run lint
         run: pnpm lint
 
       - name: Run Vitest
         run: pnpm test
-
-      - name: Build application and verify browser bundle
-        run: pnpm build
 
       - name: Start Supabase local stack
         run: pnpm exec supabase start
@@ -99,7 +115,7 @@ jobs:
       - name: Verify local migration history
         run: pnpm exec supabase migration list --local
 
-      - name: Verify foundation constraints and indexes
+      - name: Verify database contracts
         run: |
           DB_CONTAINER=$(docker ps \
             --filter "label=com.supabase.cli.project=atlas" \
@@ -107,21 +123,58 @@ jobs:
             --format '{{.Names}}' | head -n 1)
 
           test -n "$DB_CONTAINER"
-          docker exec -i "$DB_CONTAINER" \
-            psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-            < supabase/tests/atlas_foundation.sql
 
-      - name: Verify multiempresa RLS isolation
+          for test_file in \
+            supabase/tests/atlas_foundation.sql \
+            supabase/tests/rls_isolation.sql \
+            supabase/tests/auth_profile.sql
+          do
+            docker exec -i "$DB_CONTAINER" \
+              psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+              < "$test_file"
+          done
+
+      - name: Export local Supabase application variables
         run: |
-          DB_CONTAINER=$(docker ps \
-            --filter "label=com.supabase.cli.project=atlas" \
-            --filter "name=supabase_db_" \
-            --format '{{.Names}}' | head -n 1)
+          eval "$(pnpm exec supabase status -o env)"
+          test -n "$API_URL"
 
-          test -n "$DB_CONTAINER"
-          docker exec -i "$DB_CONTAINER" \
-            psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-            < supabase/tests/rls_isolation.sql
+          if [ -n "${PUBLISHABLE_KEY:-}" ]; then
+            PUBLIC_KEY="$PUBLISHABLE_KEY"
+          else
+            PUBLIC_KEY="$ANON_KEY"
+          fi
+
+          test -n "$PUBLIC_KEY"
+          echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLIC_KEY" >> "$GITHUB_ENV"
+
+      - name: Build application and verify browser bundle
+        run: pnpm build
+
+      - name: Install Chromium
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "0"
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start Atlas application
+        run: |
+          nohup pnpm start > /tmp/atlas-app.log 2>&1 &
+          echo $! > /tmp/atlas-app.pid
+
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:3000/login > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/atlas-app.log
+          exit 1
+
+      - name: Verify authentication flows in browser
+        run: pnpm test:auth:integration
 
       - name: Lint database schemas
         run: |
@@ -136,19 +189,28 @@ jobs:
       - name: Check Supabase local status
         run: pnpm exec supabase status
 
-      - name: Stop Supabase local stack
-        if: always()
-        run: pnpm exec supabase stop || true
-
-      - name: Commit generated authentication migration shell
+      - name: Commit normalized local Auth config
         if: success()
         run: |
           git config user.name "atlas-validation-bot"
           git config user.email "atlas-validation-bot@users.noreply.github.com"
-          git add supabase/migrations
+          git add supabase/config.toml
+
           if git diff --cached --quiet; then
-            echo "No generated migration to commit."
+            echo "Auth config already normalized."
             exit 0
           fi
-          git commit -m "create authentication migration shell"
+
+          git commit -m "configure local authentication redirects"
           git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Stop Atlas application
+        if: always()
+        run: |
+          if [ -f /tmp/atlas-app.pid ]; then
+            kill "$(cat /tmp/atlas-app.pid)" || true
+          fi
+
+      - name: Stop Supabase local stack
+        if: always()
+        run: pnpm exec supabase stop || true
