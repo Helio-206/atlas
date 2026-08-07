@@ -12,10 +12,25 @@ async function waitForPath(page, pathname) {
 }
 
 async function waitForProjectDetail(page) {
-  await page.waitForURL((url) => /^\/dashboard\/projects\/[0-9a-f-]{36}$/.test(url.pathname))
-  const pathname = new URL(page.url()).pathname
-  assert.match(pathname, /^\/dashboard\/projects\/[0-9a-f-]{36}$/)
-  return pathname
+  await page.waitForURL((url) => {
+    const isProjectDetail = /^\/dashboard\/projects\/[0-9a-f-]{36}$/.test(
+      url.pathname,
+    )
+    const isCreationFailure =
+      url.pathname === '/dashboard/projects/new' &&
+      url.searchParams.get('error') === 'creation_failed'
+
+    return isProjectDetail || isCreationFailure
+  })
+
+  const url = new URL(page.url())
+
+  if (url.searchParams.get('error') === 'creation_failed') {
+    throw new Error('Project creation failed through the application interface')
+  }
+
+  assert.match(url.pathname, /^\/dashboard\/projects\/[0-9a-f-]{36}$/)
+  return url.pathname
 }
 
 const browser = await chromium.launch({ headless: true })
