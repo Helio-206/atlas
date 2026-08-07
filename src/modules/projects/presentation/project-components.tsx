@@ -32,7 +32,7 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
 }
 
 type ProjectFormProps = {
-  action: (formData: FormData) => Promise<unknown>
+  action: (formData: FormData) => void | Promise<void>
   project?: Project
   submitLabel: string
 }
