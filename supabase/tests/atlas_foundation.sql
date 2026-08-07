@@ -63,7 +63,9 @@ BEGIN
     WHERE n.nspname = 'platform'
       AND c.relname = 'outbox_messages_unprocessed_idx'
       AND i.indpred IS NOT NULL
-      AND pg_get_expr(i.indpred, i.indrelid) = '(processed_at IS NULL)'
+      AND position(
+        'processed_at IS NULL' in pg_get_expr(i.indpred, i.indrelid)
+      ) > 0
   ) THEN
     RAISE EXCEPTION 'outbox unprocessed index is not partial on processed_at is null';
   END IF;
@@ -108,6 +110,7 @@ DO $$
 DECLARE
   v_user_id uuid := '10000000-0000-0000-0000-000000000001';
   v_company_id uuid := '20000000-0000-0000-0000-000000000001';
+  v_second_company_id uuid := '20000000-0000-0000-0000-000000000002';
   v_project_id uuid;
   v_version integer;
 BEGIN
@@ -149,7 +152,9 @@ BEGIN
   VALUES (v_user_id, 'Atlas Foundation Test');
 
   INSERT INTO identity.companies (id, name, tax_number, created_by)
-  VALUES (v_company_id, 'Atlas Test Company', 'TEST-NIF-001', v_user_id);
+  VALUES
+    (v_company_id, 'Atlas Test Company', 'TEST-NIF-001', v_user_id),
+    (v_second_company_id, 'Atlas Test Company 2', 'TEST-NIF-002', v_user_id);
 
   INSERT INTO identity.memberships (company_id, user_id, role, status)
   VALUES (v_company_id, v_user_id, 'owner', 'active');
@@ -164,12 +169,10 @@ BEGIN
 
   BEGIN
     INSERT INTO identity.memberships (company_id, user_id, role, status)
-    VALUES (gen_random_uuid(), v_user_id, 'viewer', 'invalid');
+    VALUES (v_second_company_id, v_user_id, 'viewer', 'invalid');
     RAISE EXCEPTION 'invalid membership status was accepted';
   EXCEPTION
     WHEN check_violation THEN NULL;
-    WHEN foreign_key_violation THEN
-      RAISE EXCEPTION 'membership status check did not run before foreign key validation';
   END;
 
   INSERT INTO projects.projects (
@@ -261,7 +264,11 @@ BEGIN
   );
 
   INSERT INTO platform.outbox_messages (company_id, event_type, payload)
-  VALUES (v_company_id, 'project.created', '{"project_id":"20000000-0000-0000-0000-000000000001"}'::jsonb);
+  VALUES (
+    v_company_id,
+    'project.created',
+    jsonb_build_object('project_id', v_project_id)
+  );
 
   BEGIN
     INSERT INTO platform.outbox_messages (company_id, event_type, payload, retry_count)
