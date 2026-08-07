@@ -20,20 +20,23 @@ const context = await browser.newContext()
 const page = await context.newPage()
 
 try {
-  // Protected route: an unauthenticated request must not render the dashboard.
+  // Protected routes reject unauthenticated requests.
   await page.goto(`${baseUrl}/dashboard`)
   await expectPath(page, '/login')
   assert.match(page.url(), /error=session_required/)
 
-  // Sign up locally. Supabase CLI has email confirmations disabled for local dev,
-  // so a valid signup creates a session immediately.
+  await page.goto(`${baseUrl}/onboarding/company`)
+  await expectPath(page, '/login')
+  assert.match(page.url(), /error=session_required/)
+
+  // Local signup creates a session immediately and starts company onboarding.
   await page.goto(`${baseUrl}/signup`)
   await page.getByLabel('Nome completo').fill('Atlas Auth Test')
   await page.getByLabel('Email').fill(testEmail)
   await page.getByLabel('Password', { exact: true }).fill(testPassword)
   await page.getByLabel('Confirmar password').fill(testPassword)
   await page.getByRole('button', { name: 'Criar conta' }).click()
-  await expectPath(page, '/dashboard')
+  await expectPath(page, '/onboarding/company')
 
   const sessionCookies = (await context.cookies()).filter(isAuthCookie)
   assert.ok(sessionCookies.length > 0, 'signup did not persist Supabase auth cookies')
@@ -43,6 +46,29 @@ try {
     assert.ok(!cookie.value.toLowerCase().includes('service_role'), 'auth cookie exposed privileged role')
     assert.equal(cookie.sameSite, 'Lax', 'auth cookie must use SameSite=Lax')
   }
+
+  // An authenticated user without an active company cannot open the dashboard.
+  await page.goto(`${baseUrl}/dashboard`)
+  await expectPath(page, '/onboarding/company')
+
+  // Server-side Zod validation rejects a whitespace-only company name.
+  await page.getByLabel('Nome da empresa').fill('  ')
+  await page.getByRole('button', { name: 'Criar empresa e continuar' }).click()
+  await expectPath(page, '/onboarding/company')
+  assert.match(page.url(), /error=invalid_form/)
+  const onboardingAlert = page.locator('main [role="alert"]')
+  await onboardingAlert.waitFor()
+  assert.match(await onboardingAlert.innerText(), /Verifique os dados da empresa/)
+
+  // Successful onboarding creates the company atomically and unlocks dashboard.
+  await page.getByLabel('Nome da empresa').fill('Atlas Browser Construction')
+  await page.getByLabel(/NIF/).fill('')
+  await page.getByRole('button', { name: 'Criar empresa e continuar' }).click()
+  await expectPath(page, '/dashboard')
+
+  // Active members cannot repeat onboarding.
+  await page.goto(`${baseUrl}/onboarding/company`)
+  await expectPath(page, '/dashboard')
 
   // Authenticated users must not be sent back to the login page.
   await page.goto(`${baseUrl}/login`)
@@ -70,7 +96,8 @@ try {
   )
   assert.equal((await context.cookies()).filter(isAuthCookie).length, 0)
 
-  // Valid login must create a server-side cookie session and open the dashboard.
+  // Valid login restores the server-side session and opens the dashboard because
+  // the active company membership already exists.
   await page.getByLabel('Email').fill(testEmail)
   await page.getByLabel('Password').fill(testPassword)
   await page.getByRole('button', { name: 'Entrar' }).click()
@@ -96,7 +123,7 @@ try {
   await expectPath(page, '/login')
   assert.match(page.url(), /error=session_required/)
 
-  console.log('Authentication integration flow passed.')
+  console.log('Authentication and company onboarding integration flow passed.')
 } finally {
   await browser.close()
 }
