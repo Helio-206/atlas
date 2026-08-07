@@ -149,7 +149,9 @@ BEGIN
   );
 
   INSERT INTO identity.profiles (id, full_name)
-  VALUES (v_user_id, 'Atlas Foundation Test');
+  VALUES (v_user_id, 'Atlas Foundation Test')
+  ON CONFLICT (id) DO UPDATE
+  SET full_name = EXCLUDED.full_name;
 
   INSERT INTO identity.companies (id, name, tax_number, created_by)
   VALUES
