@@ -9,9 +9,10 @@ on:
       - agent/multiempresa-rls
       - agent/authentication
       - agent/company-onboarding
+      - agent/projects-module
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: atlas-${{ github.ref }}
@@ -46,6 +47,20 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Projects migration shell with Supabase CLI
+        if: github.ref_name == 'agent/projects-module'
+        run: |
+          if compgen -G 'supabase/migrations/*_projects_module.sql' > /dev/null; then
+            exit 0
+          fi
+
+          pnpm exec supabase migration new projects_module
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/migrations/*_projects_module.sql
+          git commit -m 'generate projects module migration shell'
+          git push origin HEAD:${{ github.ref_name }}
 
       - name: Inspect Supabase CLI commands
         run: |
