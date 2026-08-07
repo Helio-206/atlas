@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run --passWithNoTests",
+    "test:auth:integration": "node tests/auth-flow.mjs",
     "test:coverage": "vitest run --coverage --passWithNoTests",
     "verify:browser-bundle": "node scripts/verify-browser-bundle.mjs"
   },
