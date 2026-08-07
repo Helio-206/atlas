@@ -136,7 +136,7 @@ INSERT INTO auth.users (
     ''
   );
 
--- Unauthenticated calls are rejected even though the function is SECURITY DEFINER.
+-- SECURITY DEFINER does not bypass the explicit auth.uid() requirement.
 select set_config('request.jwt.claim.sub', '', true);
 select set_config('request.jwt.claim.role', '', true);
 select set_config('request.jwt.claims', '{}', true);
@@ -173,10 +173,7 @@ DO $$
 DECLARE
   created_company_id uuid;
 BEGIN
-  created_company_id := identity.create_company(
-    'Atlas Construction',
-    null
-  );
+  created_company_id := identity.create_company('Atlas Construction', null);
 
   IF created_company_id IS NULL THEN
     RAISE EXCEPTION 'create_company returned null';
@@ -188,48 +185,51 @@ reset role;
 
 DO $$
 DECLARE
-  company_id uuid;
+  v_company_id uuid;
 BEGIN
-  SELECT id
-  INTO company_id
-  FROM identity.companies
-  WHERE created_by = '10000000-0000-0000-0000-0000000000c1'::uuid;
+  SELECT company.id
+  INTO v_company_id
+  FROM identity.companies AS company
+  WHERE company.created_by =
+    '10000000-0000-0000-0000-0000000000c1'::uuid;
 
-  IF company_id IS NULL THEN
+  IF v_company_id IS NULL THEN
     RAISE EXCEPTION 'company was not created';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1
-    FROM identity.companies
-    WHERE id = company_id
-      AND name = 'Atlas Construction'
-      AND tax_number IS NULL
+    FROM identity.companies AS company
+    WHERE company.id = v_company_id
+      AND company.name = 'Atlas Construction'
+      AND company.tax_number IS NULL
   ) THEN
     RAISE EXCEPTION 'company fields were not persisted correctly';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1
-    FROM identity.memberships
-    WHERE company_id = company_id
-      AND user_id = '10000000-0000-0000-0000-0000000000c1'::uuid
-      AND role = 'administrator'
-      AND status = 'active'
+    FROM identity.memberships AS membership
+    WHERE membership.company_id = v_company_id
+      AND membership.user_id =
+        '10000000-0000-0000-0000-0000000000c1'::uuid
+      AND membership.role = 'administrator'
+      AND membership.status = 'active'
   ) THEN
     RAISE EXCEPTION 'administrator membership was not created';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1
-    FROM audit.entries
-    WHERE company_id = company_id
-      AND user_id = '10000000-0000-0000-0000-0000000000c1'::uuid
-      AND action = 'company.created'
-      AND module = 'identity'
-      AND resource_type = 'company'
-      AND resource_id = company_id
-      AND metadata ->> 'membership_role' = 'administrator'
+    FROM audit.entries AS entry
+    WHERE entry.company_id = v_company_id
+      AND entry.user_id =
+        '10000000-0000-0000-0000-0000000000c1'::uuid
+      AND entry.action = 'company.created'
+      AND entry.module = 'identity'
+      AND entry.resource_type = 'company'
+      AND entry.resource_id = v_company_id
+      AND entry.metadata ->> 'membership_role' = 'administrator'
   ) THEN
     RAISE EXCEPTION 'company creation audit entry was not created';
   END IF;
@@ -265,17 +265,19 @@ DO $$
 BEGIN
   IF (
     SELECT count(*)
-    FROM identity.companies
-    WHERE created_by = '10000000-0000-0000-0000-0000000000c1'::uuid
+    FROM identity.companies AS company
+    WHERE company.created_by =
+      '10000000-0000-0000-0000-0000000000c1'::uuid
   ) <> 1 THEN
     RAISE EXCEPTION 'duplicate onboarding created an extra company';
   END IF;
 
   IF (
     SELECT count(*)
-    FROM audit.entries
-    WHERE user_id = '10000000-0000-0000-0000-0000000000c1'::uuid
-      AND action = 'company.created'
+    FROM audit.entries AS entry
+    WHERE entry.user_id =
+      '10000000-0000-0000-0000-0000000000c1'::uuid
+      AND entry.action = 'company.created'
   ) <> 1 THEN
     RAISE EXCEPTION 'duplicate onboarding created an extra audit entry';
   END IF;
@@ -311,16 +313,17 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
-    FROM identity.companies
-    WHERE created_by = '10000000-0000-0000-0000-0000000000c2'::uuid
+    FROM identity.companies AS company
+    WHERE company.created_by =
+      '10000000-0000-0000-0000-0000000000c2'::uuid
   ) THEN
     RAISE EXCEPTION 'invalid onboarding created a company';
   END IF;
 END
 $$;
 
--- Force the final audit step to fail. PostgreSQL must roll back the company
--- and membership inserted earlier in the same function call.
+-- Force the final audit step to fail. The function call must roll back the
+-- company and membership inserted earlier in the same transaction scope.
 create function pg_temp.reject_company_onboarding_audit()
 returns trigger
 language plpgsql
@@ -369,25 +372,28 @@ DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
-    FROM identity.companies
-    WHERE created_by = '10000000-0000-0000-0000-0000000000c3'::uuid
+    FROM identity.companies AS company
+    WHERE company.created_by =
+      '10000000-0000-0000-0000-0000000000c3'::uuid
   ) THEN
     RAISE EXCEPTION 'company survived a failed onboarding transaction';
   END IF;
 
   IF EXISTS (
     SELECT 1
-    FROM identity.memberships
-    WHERE user_id = '10000000-0000-0000-0000-0000000000c3'::uuid
+    FROM identity.memberships AS membership
+    WHERE membership.user_id =
+      '10000000-0000-0000-0000-0000000000c3'::uuid
   ) THEN
     RAISE EXCEPTION 'membership survived a failed onboarding transaction';
   END IF;
 
   IF EXISTS (
     SELECT 1
-    FROM audit.entries
-    WHERE user_id = '10000000-0000-0000-0000-0000000000c3'::uuid
-      AND action = 'company.created'
+    FROM audit.entries AS entry
+    WHERE entry.user_id =
+      '10000000-0000-0000-0000-0000000000c3'::uuid
+      AND entry.action = 'company.created'
   ) THEN
     RAISE EXCEPTION 'audit entry survived a failed onboarding transaction';
   END IF;
