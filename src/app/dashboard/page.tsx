@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { logoutAction } from '@/modules/identity/auth/actions'
+import { getActiveMembership } from '@/modules/identity/company-onboarding/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,12 @@ export default async function DashboardPage() {
 
   if (error || !data?.claims) {
     redirect('/login?error=session_required')
+  }
+
+  const membership = await getActiveMembership()
+
+  if (!membership) {
+    redirect('/onboarding/company')
   }
 
   const email =
@@ -43,9 +50,8 @@ export default async function DashboardPage() {
         <div className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
           <h2 className="text-lg font-semibold">Área interna protegida</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Esta página só é renderizada quando o token da sessão foi validado no
-            servidor. Os módulos operacionais do Atlas serão ligados a partir desta
-            superfície.
+            Esta página só é renderizada quando a sessão e a membership ativa da
+            empresa foram validadas no servidor.
           </p>
         </div>
       </section>
