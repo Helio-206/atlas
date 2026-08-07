@@ -10,7 +10,7 @@ on:
       - agent/authentication
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atlas-${{ github.ref }}
@@ -54,24 +54,6 @@ jobs:
           pnpm exec supabase db lint --help
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
-
-      - name: Normalize local Auth redirect allow-list
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('supabase/config.toml')
-          text = path.read_text()
-          old = 'additional_redirect_urls = ["https://127.0.0.1:3000"]'
-          new = 'additional_redirect_urls = ["http://127.0.0.1:3000/**", "http://localhost:3000/**"]'
-
-          if old in text:
-              text = text.replace(old, new, 1)
-          elif new not in text:
-              raise SystemExit('Unexpected Supabase auth redirect configuration')
-
-          path.write_text(text)
-          PY
 
       - name: Verify Atlas authentication structure
         run: |
@@ -188,21 +170,6 @@ jobs:
 
       - name: Check Supabase local status
         run: pnpm exec supabase status
-
-      - name: Commit normalized local Auth config
-        if: success()
-        run: |
-          git config user.name "atlas-validation-bot"
-          git config user.email "atlas-validation-bot@users.noreply.github.com"
-          git add supabase/config.toml
-
-          if git diff --cached --quiet; then
-            echo "Auth config already normalized."
-            exit 0
-          fi
-
-          git commit -m "configure local authentication redirects"
-          git push origin HEAD:${GITHUB_REF_NAME}
 
       - name: Stop Atlas application
         if: always()
