@@ -59,9 +59,14 @@ try {
     /Verifique os dados do projeto/,
   )
 
-  await page.getByLabel('Data final').fill('2026-12-20')
+  // Server Action validation redirects back to a fresh Server Component, so
+  // refill the complete form before the valid submission.
+  await page.getByLabel('Código').fill('WEB-001')
+  await page.getByLabel('Nome').fill('Obra Browser')
   await page.getByLabel('Cliente').fill('Cliente Browser')
   await page.getByLabel('Localização').fill('Luanda')
+  await page.getByLabel('Data inicial').fill('2026-09-10')
+  await page.getByLabel('Data final').fill('2026-12-20')
   await page.getByRole('button', { name: 'Criar projeto' }).click()
   const detailPath = await waitForProjectDetail(page)
 
