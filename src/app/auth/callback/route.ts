@@ -1,6 +1,7 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { shouldUseSecureCookies } from '@/lib/supabase/cookie-security'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 const RECOVERY_COOKIE = 'atlas-password-recovery'
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       maxAge: 10 * 60,
       path: '/forgot-password',
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: shouldUseSecureCookies(),
     })
   }
 
