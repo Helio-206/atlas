@@ -32,12 +32,18 @@ export async function createServerSupabaseClient() {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, {
+              ...options,
+              sameSite: options.sameSite ?? 'lax',
+              secure:
+                process.env.NODE_ENV === 'production'
+                  ? true
+                  : options.secure,
+            })
           })
         } catch {
-          // Server Components cannot mutate cookies. Server Actions and Route
-          // Handlers can, and the later session-refresh proxy will handle
-          // refresh writes for Server Component requests.
+          // Server Components cannot mutate cookies. The request proxy refreshes
+          // sessions and persists cookie changes before protected content renders.
         }
       },
     },
