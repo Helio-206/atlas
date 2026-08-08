@@ -7,6 +7,7 @@ const labels: Record<PurchaseRequestStatus, string> = {
   financial_review: 'Revisão financeira',
   executive_review: 'Revisão executiva',
   approved: 'Aprovada',
+  supplier_selected: 'Fornecedor selecionado',
   returned: 'Devolvida',
   rejected: 'Rejeitada',
   cancelled: 'Cancelada',
