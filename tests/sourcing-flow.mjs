@@ -127,7 +127,7 @@ try {
 
   await page.goto(`${baseUrl}${requestPath}`)
   const requestText = await page.locator('main').innerText()
-  assert.match(requestText, /supplier selected/i)
+  assert.match(requestText, /Fornecedor selecionado/i)
   assert.match(requestText, /Selected Supplier/)
   assert.match(requestText, /Supplier A E2E/)
 
