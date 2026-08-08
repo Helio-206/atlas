@@ -47,6 +47,10 @@ function errorCode(error: unknown) {
   if (message.includes('quotation_items_required')) return 'quotation_items_required'
   if (message.includes('supplier_selection_justification_required')) return 'justification_required'
   if (message.includes('supplier_already_selected')) return 'supplier_already_selected'
+  if (message.includes('purchase_request_item_not_found')) return 'purchase_request_item_not_found'
+  if (message.includes('purchase_request_not_found')) return 'purchase_request_not_found'
+  if (message.includes('supplier_not_found')) return 'supplier_not_found'
+  if (message.includes('quotation_not_found')) return 'quotation_not_found'
   if (message.includes('not_found')) return 'not_found'
   return 'command_failed'
 }
