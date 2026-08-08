@@ -43,7 +43,6 @@ insert into procurement.purchase_request_items (
   ('65000000-0000-0000-0000-000000000004','64000000-0000-0000-0000-000000000003','Item second PR',1,'un',100000),
   ('65000000-0000-0000-0000-000000000005','64000000-0000-0000-0000-000000000004','Item company B',1,'un',100000);
 
--- Cross-tenant supplier exists but is intentionally invisible to Company A commands.
 insert into procurement.suppliers (
   id, company_id, name, tax_number, status, created_by
 ) values (
@@ -64,10 +63,6 @@ BEGIN
   IF (SELECT count(*) FROM public.list_suppliers(null,null)) <> 2 THEN
     RAISE EXCEPTION 'supplier creation/list failed';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM audit.entries
-    WHERE action='SupplierCreated' AND resource_id=current_setting('atlas.test.supplier_a')::uuid
-  ) THEN RAISE EXCEPTION 'SupplierCreated audit missing'; END IF;
 END
 $$;
 
@@ -204,7 +199,6 @@ BEGIN
 END
 $$;
 
--- Exercise item mutation use cases and derived totals on Quote A.
 DO $$
 DECLARE qa uuid := current_setting('atlas.test.quote_a')::uuid;
 DECLARE item_id uuid;
@@ -229,8 +223,6 @@ BEGIN
 END
 $$;
 
--- Block Supplier B after it has submitted a quotation: historical quote stays visible,
--- but it cannot be selected for a new purchase.
 DO $$
 DECLARE supplier_b uuid := current_setting('atlas.test.supplier_b')::uuid;
 BEGIN
@@ -292,11 +284,6 @@ BEGIN
       AND quotation_id=current_setting('atlas.test.quote_a')::uuid
       AND justification='Melhor equilíbrio entre preço, cobertura e prazo.'
   ) THEN RAISE EXCEPTION 'supplier selection was not persisted'; END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM audit.entries
-    WHERE action='SupplierSelected' AND resource_id='64000000-0000-0000-0000-000000000001'
-  ) THEN RAISE EXCEPTION 'SupplierSelected audit missing'; END IF;
 END
 $$;
 
@@ -313,8 +300,13 @@ BEGIN
 END
 $$;
 
+reset role;
+
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM audit.entries WHERE action='SupplierCreated' AND resource_id=current_setting('atlas.test.supplier_a')::uuid) THEN
+    RAISE EXCEPTION 'SupplierCreated audit missing';
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM audit.entries WHERE action='SupplierUpdated' AND resource_id=current_setting('atlas.test.supplier_a')::uuid) THEN
     RAISE EXCEPTION 'SupplierUpdated audit missing';
   END IF;
@@ -330,8 +322,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM audit.entries WHERE action='QuotationSubmitted' AND resource_id=current_setting('atlas.test.quote_a')::uuid) THEN
     RAISE EXCEPTION 'QuotationSubmitted audit missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM audit.entries WHERE action='SupplierSelected' AND resource_id='64000000-0000-0000-0000-000000000001') THEN
+    RAISE EXCEPTION 'SupplierSelected audit missing';
+  END IF;
 END
 $$;
 
-reset role;
 rollback;
