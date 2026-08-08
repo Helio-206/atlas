@@ -31,6 +31,7 @@ import {
   PurchaseRequestStatusBadge,
 } from '@/modules/procurement/presentation/components'
 import { getProcurementError, getProcurementNotice } from '@/modules/procurement/presentation/feedback'
+import { SourcingSummary } from '@/modules/procurement/presentation/sourcing-summary'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,7 +64,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
   const ownRequest = request.requestedBy === access.userId
   const editable = ownRequest && access.can('Procurement.EditOwn') && ['draft', 'returned'].includes(request.status)
   const reviewable = !ownRequest
-  const canCancel = access.can('Procurement.Cancel') && (ownRequest || access.membership.role === 'administrator') && !['approved', 'rejected', 'cancelled'].includes(request.status)
+  const canCancel = access.can('Procurement.Cancel') && (ownRequest || access.membership.role === 'administrator') && !['approved', 'supplier_selected', 'rejected', 'cancelled'].includes(request.status)
   const activeProjects = projects.filter((project) => project.status === 'active')
 
   return (
@@ -141,6 +142,8 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
             </form>
           ) : null}
         </section>
+
+        <SourcingSummary requestId={request.id} permissions={access.permissions} />
 
         <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
           <h2 className="text-lg font-semibold">Actions</h2>
