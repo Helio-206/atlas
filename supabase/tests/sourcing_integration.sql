@@ -76,10 +76,15 @@ DO $$ begin
   if not exists(select 1 from procurement.purchase_requests where id='64000000-0000-4000-8000-000000000001' and status='supplier_selected' and version=2) then raise exception 'supplier selection did not transition PR'; end if;
   if (select count(*) from procurement.supplier_selections where purchase_request_id='64000000-0000-4000-8000-000000000001')<>1 then raise exception 'selection not persisted once'; end if;
   if not exists(select 1 from procurement.quotations where id=current_setting('atlas.quote.a')::uuid and status='accepted') then raise exception 'selected quotation not accepted'; end if;
-  if not exists(select 1 from audit.entries where resource_id='64000000-0000-4000-8000-000000000001' and action='SupplierSelected') then raise exception 'supplier selection audit missing'; end if;
-  if (select count(*) from audit.entries where action in ('SupplierCreated','QuotationCreated','QuotationSubmitted','SupplierSelected') and company_id='62000000-0000-4000-8000-000000000001') < 9 then raise exception 'sourcing audit incomplete'; end if;
 end $$;
 
+reset role;
+DO $$ begin
+  if not exists(select 1 from audit.entries where resource_id='64000000-0000-4000-8000-000000000001' and action='SupplierSelected') then raise exception 'supplier selection audit missing'; end if;
+  if (select count(*) from audit.entries where action in ('SupplierCreated','QuotationCreated','QuotationSubmitted','SupplierSelected') and company_id='62000000-0000-4000-8000-000000000001') <> 8 then raise exception 'sourcing audit event count mismatch'; end if;
+end $$;
+
+set local role authenticated;
 select set_config('atlas.quote.c',public.create_quotation(
   '64000000-0000-4000-8000-000000000002',current_setting('atlas.supplier.c')::uuid,'QC-1','AOA',0,null,2,null,null,
   '[{"purchaseRequestItemId":"65000000-0000-4000-8000-000000000003","description":"Aço","quantity":1,"unit":"lote","unitPrice":90}]'::jsonb
@@ -92,9 +97,9 @@ DO $$ begin
   exception when raise_exception then if SQLERRM <> 'supplier_blocked' then raise; end if; end;
 end $$;
 
+reset role;
 DO $$ begin
   if not exists(select 1 from audit.entries where resource_id=current_setting('atlas.supplier.c')::uuid and action='SupplierBlocked') then raise exception 'supplier block audit missing'; end if;
 end $$;
 
-reset role;
 rollback;
