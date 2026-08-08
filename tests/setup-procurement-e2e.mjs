@@ -50,8 +50,8 @@ for (const account of Object.values(accounts)) {
   assert.match(account.id, /^[0-9a-f-]{36}$/)
 }
 
-const companyId = '51000000-0000-0000-0000-000000000001'
-const projectId = '52000000-0000-0000-0000-000000000001'
+const companyId = '51000000-0000-4000-8000-000000000001'
+const projectId = '52000000-0000-4000-8000-000000000001'
 const containerResult = spawnSync(
   'docker',
   [
