@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --passWithNoTests",
-    "test:integration": "node scripts/test-sql-contracts.mjs supabase/tests/atlas_foundation.sql supabase/tests/auth_profile.sql supabase/tests/company_onboarding.sql supabase/tests/projects_module.sql supabase/tests/procurement_integration.sql",
+    "test:integration": "node scripts/test-sql-contracts.mjs supabase/tests/atlas_foundation.sql supabase/tests/auth_profile.sql supabase/tests/company_onboarding.sql supabase/tests/projects_module.sql supabase/tests/procurement_integration_v2.sql",
     "test:rls": "node scripts/test-sql-contracts.mjs supabase/tests/rls_isolation.sql supabase/tests/procurement_rls.sql",
     "test:e2e": "node tests/setup-procurement-e2e.mjs && node tests/auth-flow.mjs && node tests/projects-flow.mjs && node tests/procurement-flow.mjs",
     "test:auth:integration": "node tests/auth-flow.mjs",
