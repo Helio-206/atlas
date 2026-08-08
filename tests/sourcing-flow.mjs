@@ -35,25 +35,26 @@ async function createSupplier(page, { name, taxNumber }) {
 
 async function createQuotation(page, { supplierName, number, prices, partial = false, deliveryDays }) {
   await page.goto(`${baseUrl}${quotationsPath}`)
-  await page.getByLabel('Fornecedor').selectOption({ label: supplierName })
-  await page.getByLabel('Número da cotação').fill(number)
-  await page.getByLabel('Moeda').selectOption('AOA')
-  await page.getByLabel('Imposto').fill('0')
-  await page.getByLabel('Válida até').fill('2026-12-20')
-  await page.getByLabel('Prazo de entrega (dias)').fill(String(deliveryDays))
-  await page.getByLabel('Condições de pagamento').fill('30 dias')
+  const quotationForm = page.locator('form', { has: page.getByRole('button', { name: 'Registar cotação' }) })
+  await quotationForm.getByLabel('Fornecedor').selectOption({ label: supplierName })
+  await quotationForm.getByLabel('Número da cotação').fill(number)
+  await quotationForm.getByLabel('Moeda').selectOption('AOA')
+  await quotationForm.getByLabel('Imposto').fill('0')
+  await quotationForm.getByLabel('Válida até').fill('2026-12-20')
+  await quotationForm.getByLabel('Prazo de entrega (dias)').fill(String(deliveryDays))
+  await quotationForm.getByLabel('Condições de pagamento').fill('30 dias')
 
   if (partial) {
-    await page.getByRole('button', { name: 'Remover' }).last().click()
+    await quotationForm.getByRole('button', { name: 'Remover' }).last().click()
   }
 
-  const priceInputs = page.getByLabel('Preço unit.')
+  const priceInputs = quotationForm.locator('label', { hasText: 'Preço unit.' }).locator('input')
   assert.equal(await priceInputs.count(), prices.length)
   for (let index = 0; index < prices.length; index += 1) {
     await priceInputs.nth(index).fill(String(prices[index]))
   }
 
-  await page.getByRole('button', { name: 'Registar cotação' }).click()
+  await quotationForm.getByRole('button', { name: 'Registar cotação' }).click()
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'quotation_created')
   const text = await page.locator('main').innerText()
   assert.match(text, new RegExp(supplierName))
@@ -104,8 +105,6 @@ try {
   assert.match(comparisonText, /Best Coverage/)
   assert.match(comparisonText, /Partial quotation/)
 
-  // A submitted historical quotation remains visible after its supplier becomes blocked,
-  // but the supplier can no longer be selected.
   await page.goto(`${baseUrl}${supplierBPath}`)
   await page.getByRole('button', { name: 'Bloquear' }).click()
   await page.waitForURL((url) => url.pathname === supplierBPath && url.searchParams.get('notice') === 'supplier_blocked')
@@ -131,7 +130,6 @@ try {
   assert.match(requestText, /Selected Supplier/)
   assert.match(requestText, /Supplier A E2E/)
 
-  // Keep the first supplier URL exercised as a real detail route.
   assert.match(supplierAPath, /^\/dashboard\/suppliers\/[0-9a-f-]{36}$/)
 
   console.log('Sourcing browser integration flow passed.')
