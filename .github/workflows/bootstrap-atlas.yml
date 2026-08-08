@@ -61,8 +61,10 @@ jobs:
       - name: Verify Sprint 2 structure
         run: |
           test -f supabase/migrations/20260808162730_procurement_core.sql
+          test -f supabase/migrations/20260808190000_procurement_security_hardening.sql
           test -f supabase/tests/procurement_integration_v2.sql
           test -f supabase/tests/procurement_rls.sql
+          test -f supabase/tests/procurement_security.sql
           test -f src/modules/procurement/domain/purchase-request.ts
           test -f src/modules/procurement/domain/purchase-request.test.ts
           test -f src/modules/procurement/domain/permissions.ts
