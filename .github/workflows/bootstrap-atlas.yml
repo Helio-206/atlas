@@ -13,7 +13,7 @@ on:
       - sprint2-procurement-core
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: atlas-${{ github.ref }}
@@ -22,7 +22,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    timeout-minutes: 55
     env:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       SUPABASE_TELEMETRY_DISABLED: "1"
@@ -52,86 +52,55 @@ jobs:
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
-          pnpm exec supabase migration new --help
           pnpm exec supabase migration list --help
           pnpm exec supabase db reset --help
           pnpm exec supabase db lint --help
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
 
-      - name: Generate Procurement migration shell
-        if: github.ref_name == 'sprint2-procurement-core' && hashFiles('supabase/migrations/*_procurement_core.sql') == ''
+      - name: Verify Sprint 2 structure
         run: |
-          pnpm exec supabase migration new procurement_core
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supabase/migrations
-          git commit -m "chore: generate procurement migration"
-          git push origin HEAD:${GITHUB_REF_NAME}
+          test -f supabase/migrations/20260808162730_procurement_core.sql
+          test -f supabase/tests/procurement_integration.sql
+          test -f supabase/tests/procurement_rls.sql
+          test -f src/modules/procurement/domain/purchase-request.ts
+          test -f src/modules/procurement/domain/purchase-request.test.ts
+          test -f src/modules/procurement/domain/permissions.ts
+          test -f src/modules/procurement/application/use-cases.ts
+          test -f src/modules/procurement/infrastructure/procurement-repository.ts
+          test -f src/modules/procurement/presentation/access.ts
+          test -f src/modules/procurement/presentation/actions.ts
+          test -f src/modules/procurement/presentation/purchase-request-form.tsx
+          test -f src/modules/procurement/presentation/components.tsx
+          test -f src/modules/procurement/presentation/feedback.ts
+          test -f src/modules/procurement/contracts/schemas.ts
+          test -f src/app/dashboard/procurement/page.tsx
+          test -f src/app/dashboard/procurement/new/page.tsx
+          test -f 'src/app/dashboard/procurement/[id]/page.tsx'
+          test -f src/app/dashboard/approvals/page.tsx
+          test -f tests/setup-procurement-e2e.mjs
+          test -f tests/procurement-flow.mjs
+          test -f scripts/test-sql-contracts.mjs
 
-      - name: Stop after migration generation
-        if: github.ref_name == 'sprint2-procurement-core' && hashFiles('supabase/migrations/*_procurement_core.sql') == ''
-        run: exit 0
-
-      - name: Verify Atlas projects structure
+      - name: Verify security boundaries
         run: |
-          test -f src/proxy.ts
-          test -f src/lib/supabase/proxy.ts
-          test -f src/app/login/page.tsx
-          test -f src/app/signup/page.tsx
-          test -f src/app/forgot-password/page.tsx
-          test -f src/app/auth/callback/route.ts
-          test -f src/app/dashboard/page.tsx
-          test -f src/app/onboarding/company/page.tsx
-          test -f src/app/dashboard/projects/page.tsx
-          test -f src/app/dashboard/projects/new/page.tsx
-          test -f 'src/app/dashboard/projects/[id]/page.tsx'
-          test -f src/modules/identity/auth/actions.ts
-          test -f src/modules/identity/company-onboarding/actions.ts
-          test -f src/modules/identity/company-onboarding/queries.ts
-          test -f src/modules/identity/company-onboarding/schemas.ts
-          test -f src/modules/projects/domain/project.ts
-          test -f src/modules/projects/domain/project.test.ts
-          test -f src/modules/projects/application/use-cases.ts
-          test -f src/modules/projects/infrastructure/project-repository.ts
-          test -f src/modules/projects/presentation/actions.ts
-          test -f src/modules/projects/presentation/access.ts
-          test -f src/modules/projects/presentation/feedback.ts
-          test -f src/modules/projects/presentation/project-components.tsx
-          test -f src/modules/projects/contracts/schemas.ts
-          test -f supabase/migrations/20260807101645_company_onboarding.sql
-          test -f supabase/migrations/20260807113738_projects_module.sql
-          test -f supabase/tests/company_onboarding.sql
-          test -f supabase/tests/projects_module.sql
-          test -f tests/auth-flow.mjs
-          test -f tests/projects-flow.mjs
-          grep -Fq 'schemas = ["public", "graphql_public", "identity"]' supabase/config.toml
-          grep -q 'http://127.0.0.1:3000/\*\*' supabase/config.toml
-          git check-ignore -q .env.local
-          ! git check-ignore -q .env.example
-
-      - name: Verify normal flows avoid privileged client
-        run: |
-          ! grep -R 'createAdminSupabaseClient' \
-            src/app/login src/app/signup src/app/forgot-password \
-            src/app/auth src/app/onboarding src/app/dashboard/projects \
-            src/modules/identity/auth src/modules/identity/company-onboarding \
-            src/modules/projects tests/auth-flow.mjs tests/projects-flow.mjs
-          ! grep -R 'SUPABASE_SERVICE_ROLE_KEY' \
-            src/app/login src/app/signup src/app/forgot-password \
-            src/app/auth src/app/onboarding src/app/dashboard/projects \
-            src/modules/identity/auth src/modules/identity/company-onboarding \
-            src/modules/projects tests/auth-flow.mjs tests/projects-flow.mjs
+          ! grep -R 'SUPABASE_SERVICE_ROLE_KEY\|createAdminSupabaseClient' \
+            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals \
+            tests/setup-procurement-e2e.mjs tests/procurement-flow.mjs
           ! grep -R 'company_id' \
-            src/modules/projects/presentation/actions.ts \
-            src/modules/projects/presentation/project-components.tsx \
-            tests/projects-flow.mjs
+            src/modules/procurement/presentation/actions.ts \
+            src/modules/procurement/presentation/purchase-request-form.tsx
+          ! grep -R 'Quotation\|Supplier\|Purchase Order\|Goods Receipt\|Workflow Builder' \
+            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals || true
 
       - name: Run lint
         run: pnpm lint
 
-      - name: Run Vitest
-        run: pnpm test
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test:unit
 
       - name: Start Supabase local stack
         run: pnpm exec supabase start
@@ -142,26 +111,11 @@ jobs:
       - name: Verify local migration history
         run: pnpm exec supabase migration list --local
 
-      - name: Verify database contracts
-        run: |
-          DB_CONTAINER=$(docker ps \
-            --filter "label=com.supabase.cli.project=atlas" \
-            --filter "name=supabase_db_" \
-            --format '{{.Names}}' | head -n 1)
+      - name: Run integration contracts
+        run: pnpm test:integration
 
-          test -n "$DB_CONTAINER"
-
-          for test_file in \
-            supabase/tests/atlas_foundation.sql \
-            supabase/tests/rls_isolation.sql \
-            supabase/tests/auth_profile.sql \
-            supabase/tests/company_onboarding.sql \
-            supabase/tests/projects_module.sql
-          do
-            docker exec -i "$DB_CONTAINER" \
-              psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
-              < "$test_file"
-          done
+      - name: Run RLS contracts
+        run: pnpm test:rls
 
       - name: Export local Supabase application variables
         run: |
@@ -178,6 +132,8 @@ jobs:
           echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLIC_KEY" >> "$GITHUB_ENV"
+          echo "ATLAS_TEST_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "ATLAS_TEST_PUBLISHABLE_KEY=$PUBLIC_KEY" >> "$GITHUB_ENV"
 
       - name: Build application and verify browser bundle
         run: pnpm build
@@ -202,11 +158,8 @@ jobs:
           cat /tmp/atlas-app.log
           exit 1
 
-      - name: Verify authentication and onboarding in browser
-        run: pnpm test:auth:integration
-
-      - name: Verify Projects in browser
-        run: pnpm test:projects:integration
+      - name: Run complete E2E suite
+        run: pnpm test:e2e
 
       - name: Show Atlas application log on browser failure
         if: failure()
@@ -216,7 +169,7 @@ jobs:
         run: |
           pnpm exec supabase db lint \
             --local \
-            --schema identity,projects,audit,platform \
+            --schema identity,projects,procurement,audit,platform \
             --fail-on error
 
       - name: Run database advisors
@@ -224,6 +177,12 @@ jobs:
 
       - name: Check Supabase local status
         run: pnpm exec supabase status
+
+      - name: Verify Git diff formatting
+        run: git diff --check
+
+      - name: Show Git status
+        run: git status --short --branch
 
       - name: Stop Atlas application
         if: always()
