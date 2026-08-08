@@ -11,6 +11,7 @@ on:
       - agent/company-onboarding
       - agent/projects-module
       - sprint2-procurement-core
+      - sprint3-suppliers-quotations
 
 permissions:
   contents: read
@@ -34,6 +35,9 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
+      - name: Initial Git status
+        run: git status --short --branch
+
       - name: Configure pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -52,11 +56,20 @@ jobs:
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
+          pnpm exec supabase migration new --help
           pnpm exec supabase migration list --help
           pnpm exec supabase db reset --help
           pnpm exec supabase db lint --help
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
+
+      - name: Generate Sprint 3 migration shell
+        run: |
+          before="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
+          pnpm exec supabase migration new suppliers_quotations_selection
+          after="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
+          echo "$after"
+          comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after")
 
       - name: Verify Sprint 2 structure
         run: |
