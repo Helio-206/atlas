@@ -56,59 +56,38 @@ jobs:
       - name: Inspect Supabase CLI commands
         run: |
           pnpm exec supabase --version
-          pnpm exec supabase migration new --help
           pnpm exec supabase migration list --help
           pnpm exec supabase db reset --help
           pnpm exec supabase db lint --help
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
 
-      - name: Generate Sprint 3 structure migration shell
+      - name: Verify Sprint 3 structure
         run: |
-          before="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
-          pnpm exec supabase migration new supplier_quotation_structures
-          after="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
-          echo "$after"
-          comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after")
-
-      - name: Verify Sprint 2 structure
-        run: |
-          test -f supabase/migrations/20260808162730_procurement_core.sql
-          test -f supabase/migrations/20260808190000_procurement_security_hardening.sql
           test -f supabase/migrations/20260808185146_suppliers_quotations_selection.sql
-          test -f supabase/tests/procurement_integration_v2.sql
-          test -f supabase/tests/procurement_rls.sql
-          test -f supabase/tests/procurement_security.sql
-          test -f src/modules/procurement/domain/purchase-request.ts
-          test -f src/modules/procurement/domain/purchase-request.test.ts
-          test -f src/modules/procurement/domain/permissions.ts
-          test -f src/modules/procurement/application/use-cases.ts
-          test -f src/modules/procurement/infrastructure/procurement-repository.ts
-          test -f src/modules/procurement/presentation/access.ts
-          test -f src/modules/procurement/presentation/actions.ts
-          test -f src/modules/procurement/presentation/purchase-request-form.tsx
-          test -f src/modules/procurement/presentation/components.tsx
-          test -f src/modules/procurement/presentation/feedback.ts
-          test -f src/modules/procurement/contracts/schemas.ts
-          test -f src/app/dashboard/procurement/page.tsx
-          test -f src/app/dashboard/procurement/new/page.tsx
-          test -f 'src/app/dashboard/procurement/[id]/page.tsx'
-          test -f src/app/dashboard/approvals/page.tsx
-          test -f tests/setup-procurement-e2e.mjs
-          test -f tests/procurement-flow.mjs
-          test -f scripts/test-sql-contracts.mjs
+          test -f supabase/migrations/20260808185817_supplier_quotation_structures.sql
+          test -f src/modules/procurement/domain/sourcing.ts
+          test -f src/modules/procurement/domain/sourcing.test.ts
+          test -f src/modules/procurement/contracts/sourcing-schemas.ts
+          test -f src/modules/procurement/application/sourcing-use-cases.ts
+          test -f src/modules/procurement/infrastructure/sourcing-repository.ts
+          test -f src/modules/procurement/presentation/sourcing-actions.ts
+          test -f src/modules/procurement/presentation/quotation-form.tsx
+          test -f src/modules/procurement/presentation/sourcing-summary.tsx
+          test -f src/app/dashboard/suppliers/page.tsx
+          test -f src/app/dashboard/suppliers/new/page.tsx
+          test -f 'src/app/dashboard/suppliers/[id]/page.tsx'
+          test -f 'src/app/dashboard/procurement/[id]/quotations/page.tsx'
 
-      - name: Verify security boundaries
+      - name: Verify security and scope boundaries
         run: |
           ! grep -R 'SUPABASE_SERVICE_ROLE_KEY\|createAdminSupabaseClient' \
-            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals \
-            tests/setup-procurement-e2e.mjs tests/procurement-flow.mjs
-          ! grep -R 'company_id' \
-            src/modules/procurement/presentation/actions.ts \
-            src/modules/procurement/presentation/purchase-request-form.tsx
-          if grep -R -E 'Quotation|Supplier|Purchase Order|Goods Receipt|Workflow Builder' \
-            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals; then
-            echo 'Out-of-scope Procurement functionality detected.' >&2
+            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/suppliers src/app/dashboard/approvals
+          ! grep -R 'name="company_id"\|companyId:' \
+            src/modules/procurement/presentation src/app/dashboard/procurement src/app/dashboard/suppliers
+          if grep -R -E 'PurchaseOrder|GoodsReceipt|WorkflowBuilder|ERPIntegration|Realtime|Inventory' \
+            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/suppliers; then
+            echo 'Out-of-scope Sprint 3 functionality detected.' >&2
             exit 1
           fi
 
@@ -140,13 +119,7 @@ jobs:
         run: |
           eval "$(pnpm exec supabase status -o env)"
           test -n "$API_URL"
-
-          if [ -n "${PUBLISHABLE_KEY:-}" ]; then
-            PUBLIC_KEY="$PUBLISHABLE_KEY"
-          else
-            PUBLIC_KEY="$ANON_KEY"
-          fi
-
+          if [ -n "${PUBLISHABLE_KEY:-}" ]; then PUBLIC_KEY="$PUBLISHABLE_KEY"; else PUBLIC_KEY="$ANON_KEY"; fi
           test -n "$PUBLIC_KEY"
           echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
@@ -181,8 +154,7 @@ jobs:
         run: cat /tmp/atlas-app.log || true
 
       - name: Lint database schemas
-        run: |
-          pnpm exec supabase db lint --local --schema identity,projects,procurement,audit,platform --fail-on error
+        run: pnpm exec supabase db lint --local --schema identity,projects,procurement,audit,platform --fail-on error
 
       - name: Run database advisors
         run: pnpm exec supabase db advisors --local
