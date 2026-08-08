@@ -63,10 +63,10 @@ jobs:
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
 
-      - name: Generate Sprint 3 migration shell
+      - name: Generate Sprint 3 structure migration shell
         run: |
           before="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
-          pnpm exec supabase migration new suppliers_quotations_selection
+          pnpm exec supabase migration new supplier_quotation_structures
           after="$(find supabase/migrations -maxdepth 1 -type f -printf '%f\n' | sort)"
           echo "$after"
           comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after")
@@ -75,6 +75,7 @@ jobs:
         run: |
           test -f supabase/migrations/20260808162730_procurement_core.sql
           test -f supabase/migrations/20260808190000_procurement_security_hardening.sql
+          test -f supabase/migrations/20260808185146_suppliers_quotations_selection.sql
           test -f supabase/tests/procurement_integration_v2.sql
           test -f supabase/tests/procurement_rls.sql
           test -f supabase/tests/procurement_security.sql
@@ -165,14 +166,10 @@ jobs:
         run: |
           nohup pnpm start > /tmp/atlas-app.log 2>&1 &
           echo $! > /tmp/atlas-app.pid
-
           for attempt in $(seq 1 40); do
-            if curl --fail --silent http://127.0.0.1:3000/login > /dev/null; then
-              exit 0
-            fi
+            if curl --fail --silent http://127.0.0.1:3000/login > /dev/null; then exit 0; fi
             sleep 1
           done
-
           cat /tmp/atlas-app.log
           exit 1
 
@@ -185,10 +182,7 @@ jobs:
 
       - name: Lint database schemas
         run: |
-          pnpm exec supabase db lint \
-            --local \
-            --schema identity,projects,procurement,audit,platform \
-            --fail-on error
+          pnpm exec supabase db lint --local --schema identity,projects,procurement,audit,platform --fail-on error
 
       - name: Run database advisors
         run: pnpm exec supabase db advisors --local
@@ -205,9 +199,7 @@ jobs:
       - name: Stop Atlas application
         if: always()
         run: |
-          if [ -f /tmp/atlas-app.pid ]; then
-            kill "$(cat /tmp/atlas-app.pid)" || true
-          fi
+          if [ -f /tmp/atlas-app.pid ]; then kill "$(cat /tmp/atlas-app.pid)" || true; fi
 
       - name: Stop Supabase local stack
         if: always()
