@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   const [projects, requests, approvals] = await Promise.all([
     ListProjects.execute(),
     ListPurchaseRequests.execute(),
-    ListPendingApprovals.execute().catch(() => []),
+    ListPendingApprovals.execute(),
   ])
 
   return (
