@@ -5,10 +5,10 @@ import { spawnSync } from 'node:child_process'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.ATLAS_TEST_SUPABASE_URL
-const serviceRoleKey = process.env.ATLAS_TEST_SERVICE_ROLE_KEY
+const publishableKey = process.env.ATLAS_TEST_PUBLISHABLE_KEY
 
 assert.ok(supabaseUrl, 'ATLAS_TEST_SUPABASE_URL is required')
-assert.ok(serviceRoleKey, 'ATLAS_TEST_SERVICE_ROLE_KEY is required')
+assert.ok(publishableKey, 'ATLAS_TEST_PUBLISHABLE_KEY is required')
 
 const password = 'Atlas-Procurement-2026!'
 const suffix = Date.now()
@@ -19,18 +19,17 @@ const accounts = {
   executive: { email: `proc-executive-${suffix}@example.com`, role: 'executive_approver', name: 'Executive Approver' },
 }
 
-const admin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-})
-
 for (const account of Object.values(accounts)) {
-  const { data, error } = await admin.auth.admin.createUser({
+  const client = createClient(supabaseUrl, publishableKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data, error } = await client.auth.signUp({
     email: account.email,
     password,
-    email_confirm: true,
-    user_metadata: { full_name: account.name },
+    options: { data: { full_name: account.name } },
   })
   if (error) throw error
+  assert.ok(data.user, 'Supabase signUp did not return a user')
   account.id = data.user.id
   assert.match(account.id, /^[0-9a-f-]{36}$/)
 }
@@ -78,12 +77,7 @@ assert.equal(fixtureResult.status, 0, 'Could not create Procurement E2E fixture'
 
 writeFileSync(
   '/tmp/atlas-procurement-e2e.json',
-  JSON.stringify({
-    password,
-    companyId,
-    projectId,
-    accounts,
-  }),
+  JSON.stringify({ password, companyId, projectId, accounts }),
 )
 
-console.log('Procurement E2E fixture created.')
+console.log('Procurement E2E fixture created without service role.')
