@@ -58,10 +58,10 @@ reset role;
 
 set local role anon;
 DO $$ begin
-  if (select count(*) from procurement.suppliers)<>0 then raise exception 'anonymous read suppliers'; end if;
-  if (select count(*) from procurement.quotations)<>0 then raise exception 'anonymous read quotations'; end if;
-  if (select count(*) from procurement.quotation_items)<>0 then raise exception 'anonymous read quotation items'; end if;
-  if (select count(*) from procurement.supplier_selections)<>0 then raise exception 'anonymous read selections'; end if;
+  BEGIN PERFORM 1 FROM procurement.suppliers LIMIT 1; RAISE EXCEPTION 'anonymous read suppliers'; EXCEPTION WHEN insufficient_privilege THEN null; END;
+  BEGIN PERFORM 1 FROM procurement.quotations LIMIT 1; RAISE EXCEPTION 'anonymous read quotations'; EXCEPTION WHEN insufficient_privilege THEN null; END;
+  BEGIN PERFORM 1 FROM procurement.quotation_items LIMIT 1; RAISE EXCEPTION 'anonymous read quotation items'; EXCEPTION WHEN insufficient_privilege THEN null; END;
+  BEGIN PERFORM 1 FROM procurement.supplier_selections LIMIT 1; RAISE EXCEPTION 'anonymous read selections'; EXCEPTION WHEN insufficient_privilege THEN null; END;
 end $$;
 reset role;
 
