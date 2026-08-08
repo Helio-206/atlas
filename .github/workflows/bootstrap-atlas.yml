@@ -61,7 +61,7 @@ jobs:
       - name: Verify Sprint 2 structure
         run: |
           test -f supabase/migrations/20260808162730_procurement_core.sql
-          test -f supabase/tests/procurement_integration.sql
+          test -f supabase/tests/procurement_integration_v2.sql
           test -f supabase/tests/procurement_rls.sql
           test -f src/modules/procurement/domain/purchase-request.ts
           test -f src/modules/procurement/domain/purchase-request.test.ts
@@ -90,8 +90,11 @@ jobs:
           ! grep -R 'company_id' \
             src/modules/procurement/presentation/actions.ts \
             src/modules/procurement/presentation/purchase-request-form.tsx
-          ! grep -R 'Quotation\|Supplier\|Purchase Order\|Goods Receipt\|Workflow Builder' \
-            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals || true
+          if grep -R -E 'Quotation|Supplier|Purchase Order|Goods Receipt|Workflow Builder' \
+            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals; then
+            echo 'Out-of-scope Procurement functionality detected.' >&2
+            exit 1
+          fi
 
       - name: Run lint
         run: pnpm lint
