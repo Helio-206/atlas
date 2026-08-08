@@ -55,6 +55,14 @@ select set_config('request.jwt.claim.sub','61000000-0000-0000-0000-000000000001'
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claims','{"sub":"61000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM public.list_purchase_request_items('64000000-0000-0000-0000-000000000001')) <> 2 THEN
+    RAISE EXCEPTION 'purchase request item listing is not scoped to the requested purchase request';
+  END IF;
+END
+$$;
+
 select set_config('atlas.test.supplier_a', public.create_supplier('Supplier A','AOA-001','a@example.invalid','111','Luanda')::text, true);
 select set_config('atlas.test.supplier_b', public.create_supplier('Supplier B','AOA-002','b@example.invalid','222','Luanda')::text, true);
 

@@ -120,14 +120,14 @@ try {
   await supplierARow.getByRole('button', { name: 'Select supplier' }).click()
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'supplier_selected')
   const selectedText = await page.locator('main').innerText()
-  assert.match(selectedText, /Selected Supplier/)
+  assert.match(selectedText, /selected supplier/i)
   assert.match(selectedText, /Supplier A E2E/)
   assert.match(selectedText, /Melhor equilíbrio entre preço, cobertura e prazo\./)
 
   await page.goto(`${baseUrl}${requestPath}`)
   const requestText = await page.locator('main').innerText()
   assert.match(requestText, /Fornecedor selecionado/i)
-  assert.match(requestText, /Selected Supplier/)
+  assert.match(requestText, /selected supplier/i)
   assert.match(requestText, /Supplier A E2E/)
 
   assert.match(supplierAPath, /^\/dashboard\/suppliers\/[0-9a-f-]{36}$/)
