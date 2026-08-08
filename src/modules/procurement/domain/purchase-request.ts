@@ -6,6 +6,9 @@ export const purchaseRequestStatuses = [
   'executive_review',
   'approved',
   'supplier_selected',
+  'ordered',
+  'partially_received',
+  'received',
   'returned',
   'rejected',
   'cancelled',
@@ -155,9 +158,15 @@ export class PurchaseRequest {
     this.assertVersion(expectedVersion)
 
     if (
-      ['approved', 'supplier_selected', 'rejected', 'cancelled'].includes(
-        this.state.status,
-      )
+      [
+        'approved',
+        'supplier_selected',
+        'ordered',
+        'partially_received',
+        'received',
+        'rejected',
+        'cancelled',
+      ].includes(this.state.status)
     ) {
       throw new PurchaseRequestDomainError('purchase_request_not_cancellable')
     }

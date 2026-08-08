@@ -12,6 +12,10 @@ export const procurementPermissions = [
   'Procurement.QuotationView',
   'Procurement.QuotationManage',
   'Procurement.SupplierSelect',
+  'Procurement.PurchaseOrderView',
+  'Procurement.PurchaseOrderIssue',
+  'Procurement.GoodsReceiptView',
+  'Procurement.GoodsReceiptCreate',
 ] as const
 
 export type ProcurementPermission = (typeof procurementPermissions)[number]

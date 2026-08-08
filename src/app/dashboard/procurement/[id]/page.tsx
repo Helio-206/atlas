@@ -64,7 +64,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
   const ownRequest = request.requestedBy === access.userId
   const editable = ownRequest && access.can('Procurement.EditOwn') && ['draft', 'returned'].includes(request.status)
   const reviewable = !ownRequest
-  const canCancel = access.can('Procurement.Cancel') && (ownRequest || access.membership.role === 'administrator') && !['approved', 'supplier_selected', 'rejected', 'cancelled'].includes(request.status)
+  const canCancel = access.can('Procurement.Cancel') && (ownRequest || access.membership.role === 'administrator') && !['approved', 'supplier_selected', 'ordered', 'partially_received', 'received', 'rejected', 'cancelled'].includes(request.status)
   const activeProjects = projects.filter((project) => project.status === 'active')
 
   return (
