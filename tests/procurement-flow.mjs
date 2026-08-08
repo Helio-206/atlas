@@ -129,7 +129,10 @@ try {
   await page.getByLabel('Finalidade').fill('Equipamento pesado E2E revisto')
   await page.getByRole('button', { name: 'Guardar alterações' }).click()
   await page.waitForURL((url) => url.pathname === high.detailPath && url.searchParams.get('notice') === 'updated')
-  assert.match(await page.locator('main').innerText(), /Equipamento pesado E2E revisto/)
+  assert.equal(
+    await page.getByLabel('Finalidade').inputValue(),
+    'Equipamento pesado E2E revisto',
+  )
   await page.getByRole('button', { name: 'Submeter' }).click()
   await page.waitForURL((url) => url.pathname === high.detailPath && url.searchParams.get('notice') === 'submitted')
 
