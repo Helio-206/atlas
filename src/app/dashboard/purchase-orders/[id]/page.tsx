@@ -61,19 +61,21 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
   return (
     <main>
       <Breadcrumbs items={[{ label: 'Compras' }, { label: 'Ordens de compra', href: '/dashboard/purchase-orders' }, { label: order.orderNumber }]} />
-      <PageHeader
-        actions={receivable ? <Link className="atlas-button atlas-button-primary" href={`/dashboard/purchase-orders/${order.id}/receipts/new`}>Registar receção</Link> : undefined}
-        description={<><span className="font-medium text-[var(--text-primary)]">{order.supplierName}</span><span className="mt-1 block"><EntityLink href={`/dashboard/procurement/${order.purchaseRequestId}`}>{order.requestNumber}</EntityLink> — Aquisição operacional</span><span className="mt-1 block">Projeto: {order.projectName}</span></>}
-        title={order.orderNumber}
-      >
-        <div className="grid grid-cols-2 gap-y-4 md:grid-cols-5">
-          <HeaderMeta label="Valor total" value={<Money currency={order.currency} strong value={order.total} />} />
-          <HeaderMeta label="Emitida em" value={new Date(order.issuedAt).toLocaleDateString('pt-PT')} />
-          <HeaderMeta label="Emitida por" value={shortUser(order.issuedBy)} />
-          <HeaderMeta label="Moeda" value={order.currency} />
-          <HeaderMeta label="Estado" value={<StatusBadge label={orderStatus(order.status)} tone={order.status === 'received' ? 'success' : 'warning'} />} />
-        </div>
-      </PageHeader>
+      <div className="atlas-document-sheet atlas-document-sheet-header">
+        <PageHeader
+          actions={receivable ? <Link className="atlas-button atlas-button-primary" href={`/dashboard/purchase-orders/${order.id}/receipts/new`}>Registar receção</Link> : undefined}
+          description={<><span className="font-medium text-[var(--text-primary)]">{order.supplierName}</span><span className="mt-1 block"><EntityLink href={`/dashboard/procurement/${order.purchaseRequestId}`}>{order.requestNumber}</EntityLink> — Aquisição operacional</span><span className="mt-1 block">Projeto: {order.projectName}</span></>}
+          title={order.orderNumber}
+        >
+          <div className="grid grid-cols-2 gap-y-4 md:grid-cols-5">
+            <HeaderMeta label="Valor total" value={<Money currency={order.currency} strong value={order.total} />} />
+            <HeaderMeta label="Emitida em" value={new Date(order.issuedAt).toLocaleDateString('pt-PT')} />
+            <HeaderMeta label="Emitida por" value={shortUser(order.issuedBy)} />
+            <HeaderMeta label="Moeda" value={order.currency} />
+            <HeaderMeta label="Estado" value={<StatusBadge label={orderStatus(order.status)} tone={order.status === 'received' ? 'success' : 'warning'} />} />
+          </div>
+        </PageHeader>
+      </div>
 
       {error ? <div className="atlas-notice atlas-notice-error mt-4" role="alert">{error}</div> : null}
       {notice ? <div className="atlas-notice mt-4" role="status">{notice}</div> : null}
@@ -82,7 +84,7 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
 
       <section className="scroll-mt-6 py-5" id="overview">
         <SectionHeader title="Informação comercial" />
-        <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-4 border-b border-[var(--border)] pb-5 md:grid-cols-3">
+        <div className="atlas-document-summary mt-4 grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3">
           <Meta label="Fornecedor" value={order.supplierName} />
           <Meta label="Cotação" value={order.quotationNumber ?? order.quotationId} />
           <Meta label="Solicitação" value={<EntityLink href={`/dashboard/procurement/${order.purchaseRequestId}`}>{order.requestNumber}</EntityLink>} />
@@ -96,8 +98,8 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
 
       <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="items">
         <SectionHeader title="Itens da ordem" />
-        <div className="mt-3 border-y border-[var(--border)]">
-          <DataTable minWidth={800}>
+        <div className="mt-3">
+          <DataTable minWidth={800} surface="paper">
             <thead className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.05em] text-[var(--text-muted)]"><tr><th className="px-2 py-3 font-medium">Descrição</th><th className="px-3 py-3 text-right font-medium">Quantidade</th><th className="px-3 py-3 font-medium">Unidade</th><th className="px-3 py-3 text-right font-medium">Preço unitário</th><th className="px-2 py-3 text-right font-medium">Total</th></tr></thead>
             <tbody className="divide-y divide-[var(--border)]">{items.map((item) => <tr key={item.id}><td className="px-2 py-3 font-medium">{item.description}</td><td className="atlas-tabular px-3 py-3 text-right">{item.quantity}</td><td className="px-3 py-3 text-[var(--text-secondary)]">{item.unit}</td><td className="px-3 py-3 text-right"><Money currency={order.currency} value={item.unitPrice} /></td><td className="px-2 py-3 text-right"><Money currency={order.currency} strong value={item.total} /></td></tr>)}</tbody>
             <tfoot className="border-t border-[var(--border-strong)]"><MoneyRow label="Subtotal" value={order.subtotal} currency={order.currency} /><MoneyRow label="Impostos" value={order.taxAmount} currency={order.currency} /><MoneyRow label="Total" value={order.total} currency={order.currency} strong /></tfoot>
@@ -107,8 +109,8 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
 
       <section className="mt-5 border-t border-[var(--border)] pt-5">
         <SectionHeader description={receiptStatus ? `Progresso de receção: ${receiptStatus.fullyReceivedItemCount}/${receiptStatus.itemCount} itens completos · ${receiptStatus.progressPercent}%` : undefined} title="Estado de receção" />
-        <div className="mt-3 border-y border-[var(--border)]">
-          <DataTable minWidth={700}>
+        <div className="mt-3">
+          <DataTable minWidth={700} surface="paper">
             <thead className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.05em] text-[var(--text-muted)]"><tr><th className="px-2 py-3 font-medium">Item</th><th className="px-3 py-3 text-right font-medium">Encomendado</th><th className="px-3 py-3 text-right font-medium">Recebido</th><th className="px-2 py-3 text-right font-medium">Pendente</th></tr></thead>
             <tbody className="divide-y divide-[var(--border)]">{items.map((item) => <tr key={item.id}><td className="px-2 py-3 font-medium">{item.description}</td><td className="atlas-tabular px-3 py-3 text-right">{item.quantity} {item.unit}</td><td className="atlas-tabular px-3 py-3 text-right">{item.quantityReceived} {item.unit}</td><td className="atlas-tabular px-2 py-3 text-right font-medium">{item.remainingQuantity} {item.unit}</td></tr>)}</tbody>
           </DataTable>
@@ -117,7 +119,7 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
 
       <section className="scroll-mt-6 mt-5 border-t border-[var(--border)] pt-5" id="receipts">
         <SectionHeader action={receivable ? <Link className="atlas-link text-[12px]" href={`/dashboard/purchase-orders/${order.id}/receipts/new`}>Registar receção →</Link> : undefined} title="Receções registadas" />
-        <div className="mt-3 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+        <div className="atlas-document-sheet mt-3 divide-y divide-[var(--paper-border)] px-3">
           {receipts.length === 0 ? <p className="py-5 text-[12px] text-[var(--text-muted)]">Nenhuma receção registada. Quando a mercadoria chegar, registe a primeira receção.</p> : receipts.map((receipt) => <a className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-5 py-3 text-[12px] hover:bg-[var(--surface-subtle)]" href={`#receipt-${receipt.id}`} id={`receipt-${receipt.id}`} key={receipt.id}><span className="atlas-link font-medium">{receipt.receiptNumber}</span><span className="atlas-tabular text-[var(--text-muted)]">{new Date(receipt.receivedAt).toLocaleString('pt-PT')}</span><StatusBadge label={receipt.status === 'complete' ? 'Completa' : 'Parcial'} tone={receipt.status === 'complete' ? 'success' : 'warning'} /><span aria-hidden>→</span></a>)}
         </div>
         {receivable ? <p className="mt-3 text-[11px] text-[var(--text-muted)]">Ainda existem materiais por receber.</p> : order.status === 'received' ? <p className="mt-3 text-[11px] text-[var(--success)]">Todos os itens foram recebidos. Ordem concluída.</p> : null}
@@ -129,7 +131,7 @@ export default async function PurchaseOrderPage({ params, searchParams }: Props)
 
       <section className="scroll-mt-6 mt-5 border-t border-[var(--border)] pt-5" id="activity">
         <SectionHeader title="Atividade" />
-        <div className="mt-2"><ActivityList items={audit.map((entry) => ({ text: entry.action, time: new Date(entry.createdAt).toLocaleString('pt-PT') }))} /></div>
+        <div className="atlas-document-summary mt-2"><ActivityList items={audit.map((entry) => ({ text: entry.action, time: new Date(entry.createdAt).toLocaleString('pt-PT') }))} /></div>
       </section>
     </main>
   )

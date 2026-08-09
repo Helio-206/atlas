@@ -79,13 +79,13 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)]" data-atlas-shell>
-      <button aria-controls="atlas-sidebar" aria-expanded={open} aria-label="Abrir navegação" className="fixed left-4 top-4 z-40 flex size-9 items-center justify-center border border-[var(--border)] bg-[var(--surface)] lg:hidden" onClick={() => setOpen(true)} type="button">
+      <button aria-controls="atlas-sidebar" aria-expanded={open} aria-label="Abrir navegação" className="fixed left-4 top-4 z-40 flex size-9 items-center justify-center border border-[var(--border)] bg-[var(--surface)] lg:hidden" data-atlas-motion-link onClick={() => setOpen(true)} type="button">
         <List aria-hidden size={18} />
       </button>
       {open ? <button aria-label="Fechar navegação" className="fixed inset-0 z-40 bg-black/20 lg:hidden" onClick={() => setOpen(false)} type="button" /> : null}
       <Sidebar identity={identity} notifications={notifications} notificationsOpen={notificationsOpen} onClose={() => setOpen(false)} onNotifications={() => setNotificationsOpen((current) => !current)} open={open} />
       <div className="min-h-screen lg:pl-[244px]">
-        <div className="mx-auto w-full max-w-[1440px] px-5 pb-12 pt-20 sm:px-8 lg:px-12 lg:pt-10 xl:px-14">{children}</div>
+        <div className="mx-auto w-full max-w-[1440px] px-5 pb-12 pt-20 sm:px-8 lg:px-12 lg:pt-10 xl:px-14" data-atlas-workspace>{children}</div>
       </div>
     </div>
   )
@@ -101,7 +101,7 @@ function Sidebar({ identity, notifications, notificationsOpen, onClose, onNotifi
 }) {
   const pathname = usePathname()
   return (
-    <aside className={`fixed inset-y-0 left-0 z-50 flex w-[244px] flex-col border-r border-[var(--border)] bg-[var(--surface)] transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`} id="atlas-sidebar">
+    <aside className={`fixed inset-y-0 left-0 z-50 flex w-[244px] flex-col border-r border-[var(--border)] bg-[var(--surface)] transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`} data-atlas-sidebar id="atlas-sidebar">
       <div className="flex h-[92px] items-center justify-between px-9">
         <Link className="text-[20px] font-semibold tracking-[0.22em]" href="/dashboard" onClick={onClose}>ATLAS</Link>
         <button aria-label="Fechar navegação" className="flex size-8 items-center justify-center text-[var(--text-secondary)] lg:hidden" onClick={onClose} type="button"><X aria-hidden size={18} /></button>
@@ -116,7 +116,7 @@ function Sidebar({ identity, notifications, notificationsOpen, onClose, onNotifi
                 const Icon = item.icon
                 const disabled = item.adminOnly && identity.roleKey !== 'administrator'
                 if (disabled) return <span aria-disabled="true" className="relative flex min-h-[42px] cursor-not-allowed items-center gap-3 px-4 py-2.5 text-[13px] text-[var(--text-muted)]" key={item.href}><Icon aria-hidden size={17} weight="regular" /><span>{item.label}</span></span>
-                return <Link aria-current={active ? 'page' : undefined} className={`relative flex min-h-[42px] items-center gap-3 px-4 py-2.5 text-[13px] ${active ? 'font-medium text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`} href={item.href} key={item.href} onClick={onClose}>{active ? <span className="absolute -left-5 h-7 w-px bg-[var(--accent)]" /> : null}<Icon aria-hidden size={17} weight="regular" /><span>{item.label}</span></Link>
+                return <Link aria-current={active ? 'page' : undefined} className={`relative flex min-h-[42px] items-center gap-3 px-4 py-2.5 text-[13px] ${active ? 'font-medium text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`} data-atlas-active={active ? 'navigation' : undefined} data-atlas-motion-link href={item.href} key={item.href} onClick={onClose}>{active ? <span className="absolute -left-5 h-7 w-px bg-[var(--accent)]" /> : null}<Icon aria-hidden size={17} weight="regular" /><span>{item.label}</span></Link>
               })}
             </div>
           </div>

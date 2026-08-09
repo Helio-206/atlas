@@ -66,7 +66,7 @@ export function PurchaseRequestCreateForm({ projects, action }: Props) {
   )
 
   return (
-    <form action={action} className="space-y-8">
+    <form action={action} className="space-y-7">
       <input name="items_json" type="hidden" value={serializedItems} />
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -110,17 +110,17 @@ export function PurchaseRequestCreateForm({ projects, action }: Props) {
       <section>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold">Itens</h2>
-            <p className="mt-1 text-sm text-zinc-400">O total enviado pelo browser é ignorado; o servidor recalcula a partir dos itens.</p>
+            <h2 className="text-[16px] font-medium tracking-[-0.01em]">Itens</h2>
+            <p className="mt-1 text-[12px] text-[var(--text-muted)]">O servidor recalcula o total a partir dos itens.</p>
           </div>
-          <button className="rounded-lg border border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-800" type="button" onClick={addItem}>
+          <button className="atlas-button" type="button" onClick={addItem}>
             Adicionar item
           </button>
         </div>
 
         <div className="mt-5 space-y-4">
           {items.map((item, index) => (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4" key={item.key}>
+            <div className="atlas-paper-panel p-4" data-atlas-motion="paper-row" key={item.key}>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <label className="lg:col-span-2">
                   <span className={labelClass}>Descrição item {index + 1}</span>
@@ -140,7 +140,7 @@ export function PurchaseRequestCreateForm({ projects, action }: Props) {
                 </label>
               </div>
               <div className="mt-3 flex justify-end">
-                <button className="text-sm text-zinc-500 hover:text-red-300" type="button" onClick={() => removeItem(item.key)}>
+                <button className="text-[12px] text-[var(--danger)] hover:underline" type="button" onClick={() => removeItem(item.key)}>
                   Remover linha
                 </button>
               </div>
@@ -156,7 +156,7 @@ export function PurchaseRequestCreateForm({ projects, action }: Props) {
         </div>
       </section>
 
-      <button className="rounded-lg bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-white" type="submit">
+      <button className="atlas-button atlas-button-primary" type="submit">
         Criar solicitação
       </button>
     </form>
@@ -172,5 +172,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-const labelClass = 'mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500'
-const controlClass = 'w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-zinc-500'
+const labelClass = 'atlas-label'
+const controlClass = 'atlas-input'

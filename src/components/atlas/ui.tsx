@@ -36,7 +36,7 @@ export function PageHeader({
   children?: ReactNode
 }) {
   return (
-    <header className="border-b border-[var(--border)] pb-6">
+    <header className="border-b border-[var(--border)] pb-6" data-atlas-motion="header">
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div className="min-w-0">
           <h1 className="text-[28px] font-medium leading-tight tracking-[-0.025em]">{title}</h1>
@@ -59,7 +59,7 @@ export function SectionHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-3" data-atlas-motion="section-header">
       <div>
         <h2 className="text-[16px] font-medium tracking-[-0.01em]">{title}</h2>
         {description ? <p className="mt-1 text-[12px] text-[var(--text-muted)]">{description}</p> : null}
@@ -88,13 +88,13 @@ export function Money({ value, currency, strong = false }: { value: number; curr
     currency,
     maximumFractionDigits: 2,
   }).format(value)
-  return <span className={`atlas-money whitespace-nowrap ${strong ? 'atlas-money-paper font-semibold text-[var(--text-primary)]' : ''}`}>{formatted}</span>
+  return <span className={`atlas-money whitespace-nowrap ${strong ? 'atlas-money-paper font-semibold text-[var(--text-primary)]' : ''}`} data-atlas-money={strong ? 'strong' : 'value'}>{formatted}</span>
 }
 
-export function DataTable({ children, minWidth = 760 }: { children: ReactNode; minWidth?: number }) {
+export function DataTable({ children, minWidth = 760, surface = 'plain' }: { children: ReactNode; minWidth?: number; surface?: 'plain' | 'paper' }) {
   return (
-    <div className="atlas-scrollbar overflow-x-auto">
-      <table className="w-full border-collapse text-left text-[12px]" style={{ minWidth }}>{children}</table>
+    <div className={`atlas-scrollbar overflow-x-auto ${surface === 'paper' ? 'atlas-document-sheet atlas-document-table' : ''}`} data-atlas-motion={surface === 'paper' ? 'paper' : 'table'}>
+      <table className="w-full border-collapse text-left text-[12px]" data-atlas-table style={{ minWidth }}>{children}</table>
     </div>
   )
 }
@@ -109,6 +109,7 @@ export function Tabs({ items }: { items: Array<{ label: string; href: string; ac
             className={`relative py-3 text-[12px] ${item.active ? 'font-medium text-[var(--text-primary)] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
             href={item.href}
             key={item.label}
+            data-atlas-active={item.active ? 'tab' : undefined}
           >
             {item.label}
           </Link>

@@ -91,7 +91,7 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
       <section className="mt-5">
         <SectionHeader title="Comparação de cotações" />
         <div className="mt-3 border-y border-[var(--border)]">
-          <DataTable minWidth={900}>
+          <DataTable minWidth={900} surface="paper">
             <thead className="border-b border-[var(--border)]">
               <tr>
                 <th className="w-[21%] px-3 py-3 text-[10px] font-medium uppercase tracking-[0.05em] text-[var(--text-muted)]">Critério</th>
@@ -130,7 +130,7 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
         <section className="mt-5">
           <SectionHeader title="Comparação por item" />
           <div className="mt-3 border-y border-[var(--border)]">
-            <DataTable minWidth={900}>
+            <DataTable minWidth={900} surface="paper">
               <thead className="border-b border-[var(--border)]"><tr><th className="px-2 py-3 text-[10px] font-medium uppercase tracking-[0.05em] text-[var(--text-muted)]">Item</th>{comparison.quotations.map((quotation) => <th className="px-3 py-3 text-center font-medium" key={quotation.id}>{quotation.supplierName}<span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">({quotation.currency})</span></th>)}</tr></thead>
               <tbody className="divide-y divide-[var(--border)]">{items.map((item) => <tr key={item.id}><td className="px-2 py-3 font-medium">{item.description}</td>{comparison.quotations.map((quotation) => { const quoted = itemMap.get(quotation.id)?.find((candidate) => candidate.purchaseRequestItemId === item.id); return <td className="px-3 py-3 text-center" key={quotation.id}>{quoted ? <Money currency={quotation.currency} value={quoted.unitPrice} /> : <span className="text-[var(--danger)]">Não cotado</span>}</td> })}</tr>)}</tbody>
             </DataTable>

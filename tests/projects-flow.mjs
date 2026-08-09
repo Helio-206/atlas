@@ -11,6 +11,18 @@ async function waitForPath(page, pathname) {
   assert.equal(new URL(page.url()).pathname, pathname)
 }
 
+async function assertMainContains(page, pattern) {
+  await page.waitForFunction(
+    ({ source, flags }) => {
+      const main = document.querySelector('main')
+      return main ? new RegExp(source, flags).test(main.innerText) : false
+    },
+    { source: pattern.source, flags: pattern.flags },
+  )
+
+  assert.match(await page.locator('main').innerText(), pattern)
+}
+
 async function waitForProjectDetail(page) {
   await page.waitForURL((url) => {
     const isProjectDetail = /^\/dashboard\/projects\/[0-9a-f-]{36}$/.test(
@@ -55,7 +67,7 @@ try {
 
   await page.goto(`${baseUrl}/dashboard/projects`)
   await waitForPath(page, '/dashboard/projects')
-  assert.match(await page.locator('main').innerText(), /Ainda não existem projetos/)
+  await assertMainContains(page, /Ainda não existem projetos/)
 
   await page.getByRole('link', { name: 'Novo projeto' }).click()
   await waitForPath(page, '/dashboard/projects/new')
@@ -85,43 +97,43 @@ try {
   await page.getByRole('button', { name: 'Criar projeto' }).click()
   const detailPath = await waitForProjectDetail(page)
 
-  assert.match(await page.locator('main').innerText(), /Draft/)
-  assert.match(await page.locator('main').innerText(), /WEB-001 · versão 1/)
+  await assertMainContains(page, /Draft/)
+  await assertMainContains(page, /WEB-001 · versão 1/)
 
   await page.getByRole('button', { name: 'Ativar projeto' }).click()
   await page.waitForURL((url) =>
     url.pathname === detailPath && url.searchParams.get('notice') === 'activated',
   )
-  assert.match(await page.locator('main').innerText(), /Ativo/)
-  assert.match(await page.locator('main').innerText(), /WEB-001 · versão 2/)
+  await assertMainContains(page, /Ativo/)
+  await assertMainContains(page, /WEB-001 · versão 2/)
 
   await page.getByLabel('Nome').fill('Obra Browser Revista')
   await page.getByRole('button', { name: 'Guardar alterações' }).click()
   await page.waitForURL((url) =>
     url.pathname === detailPath && url.searchParams.get('notice') === 'updated',
   )
-  assert.match(await page.locator('main').innerText(), /Obra Browser Revista/)
-  assert.match(await page.locator('main').innerText(), /WEB-001 · versão 3/)
+  await assertMainContains(page, /Obra Browser Revista/)
+  await assertMainContains(page, /WEB-001 · versão 3/)
 
   await page.getByRole('button', { name: 'Suspender projeto' }).click()
   await page.waitForURL((url) =>
     url.pathname === detailPath && url.searchParams.get('notice') === 'suspended',
   )
-  assert.match(await page.locator('main').innerText(), /Suspenso/)
-  assert.match(await page.locator('main').innerText(), /WEB-001 · versão 4/)
+  await assertMainContains(page, /Suspenso/)
+  await assertMainContains(page, /WEB-001 · versão 4/)
 
   await page.getByRole('button', { name: 'Encerrar projeto' }).click()
   await page.waitForURL((url) =>
     url.pathname === detailPath && url.searchParams.get('notice') === 'closed',
   )
-  assert.match(await page.locator('main').innerText(), /Fechado/)
-  assert.match(await page.locator('main').innerText(), /WEB-001 · versão 5/)
+  await assertMainContains(page, /Fechado/)
+  await assertMainContains(page, /WEB-001 · versão 5/)
   assert.equal(await page.getByRole('button', { name: 'Guardar alterações' }).count(), 0)
 
   await page.goto(`${baseUrl}/dashboard/projects`)
   await waitForPath(page, '/dashboard/projects')
-  assert.match(await page.locator('main').innerText(), /Obra Browser Revista/)
-  assert.match(await page.locator('main').innerText(), /Fechado/)
+  await assertMainContains(page, /Obra Browser Revista/)
+  await assertMainContains(page, /Fechado/)
 
   console.log('Projects browser integration flow passed.')
 } finally {

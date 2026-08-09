@@ -95,28 +95,30 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
         { label: request.requestNumber },
       ]} />
 
-      <PageHeader
-        actions={
-          canReview ? (
-            <DecisionForm approveAction={approvalAction} requestId={request.id} version={request.version} />
-          ) : (
-            <div className="flex gap-2">
-              {ownRequest && access.can('Procurement.Submit') && ['draft', 'returned'].includes(request.status) ? <CommandForm action={submitPurchaseRequestAction} label="Submeter" primary requestId={request.id} version={request.version} /> : null}
-              {canCancel ? <CommandForm action={cancelPurchaseRequestAction} label="Cancelar" requestId={request.id} version={request.version} /> : null}
-            </div>
-          )
-        }
-        description={<><span className="font-medium text-[var(--text-primary)]">{request.purpose}</span><span className="mt-1 block">Projeto: {request.projectName}</span></>}
-        title={request.requestNumber}
-      >
-        <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4 lg:grid-cols-[1.2fr_0.8fr_0.9fr_1fr]">
-          <HeaderMeta label="Valor estimado" value={<Money currency={request.currency} strong value={request.estimatedTotal} />} />
-          <HeaderMeta label="Prioridade" value={<span className="capitalize">{priorityLabel(request.priority)}</span>} />
-          <HeaderMeta label="Data necessária" value={new Date(`${request.requiredDate}T00:00:00`).toLocaleDateString('pt-PT')} />
-          <HeaderMeta label="Estado" value={<PurchaseRequestStatusBadge status={request.status} />} />
-        </div>
-        {canReview ? <p className="mt-4 text-[11px] text-[var(--text-muted)]">Esta solicitação está pronta para decisão {reviewLabel(request.status)}.</p> : null}
-      </PageHeader>
+      <div className="atlas-document-sheet atlas-document-sheet-header">
+        <PageHeader
+          actions={
+            canReview ? (
+              <DecisionForm approveAction={approvalAction} requestId={request.id} version={request.version} />
+            ) : (
+              <div className="flex gap-2">
+                {ownRequest && access.can('Procurement.Submit') && ['draft', 'returned'].includes(request.status) ? <CommandForm action={submitPurchaseRequestAction} label="Submeter" primary requestId={request.id} version={request.version} /> : null}
+                {canCancel ? <CommandForm action={cancelPurchaseRequestAction} label="Cancelar" requestId={request.id} version={request.version} /> : null}
+              </div>
+            )
+          }
+          description={<><span className="font-medium text-[var(--text-primary)]">{request.purpose}</span><span className="mt-1 block">Projeto: {request.projectName}</span></>}
+          title={request.requestNumber}
+        >
+          <div className="grid grid-cols-2 gap-y-4 md:grid-cols-4 lg:grid-cols-[1.2fr_0.8fr_0.9fr_1fr]">
+            <HeaderMeta label="Valor estimado" value={<Money currency={request.currency} strong value={request.estimatedTotal} />} />
+            <HeaderMeta label="Prioridade" value={<span className="capitalize">{priorityLabel(request.priority)}</span>} />
+            <HeaderMeta label="Data necessária" value={new Date(`${request.requiredDate}T00:00:00`).toLocaleDateString('pt-PT')} />
+            <HeaderMeta label="Estado" value={<PurchaseRequestStatusBadge status={request.status} />} />
+          </div>
+          {canReview ? <p className="mt-4 text-[11px] text-[var(--text-muted)]">Esta solicitação está pronta para decisão {reviewLabel(request.status)}.</p> : null}
+        </PageHeader>
+      </div>
 
       {error ? <div className="atlas-notice atlas-notice-error mt-4" role="alert">{error}</div> : null}
       {notice ? <div className="atlas-notice mt-4" role="status">{notice}</div> : null}
@@ -135,7 +137,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
 
       <section className="scroll-mt-6 py-5" id="overview">
         <SectionHeader title="Visão geral" />
-        <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-4 border-b border-[var(--border)] pb-5 md:grid-cols-4">
+        <div className="atlas-document-summary mt-4 grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-4">
           <Meta label="Solicitante" value={request.requesterName ?? 'Utilizador'} />
           <Meta label="Criada em" value={new Date(request.createdAt).toLocaleString('pt-PT')} />
           <Meta label="Moeda" value={request.currency} />
@@ -158,9 +160,9 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
 
       <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="items">
         <SectionHeader description={`${items.length} item(ns)`} title="Itens solicitados" />
-        <div className="mt-3 border-y border-[var(--border)]">
+        <div className="mt-3">
           {editable ? (
-            <div className="divide-y divide-[var(--border)]">
+            <div className="atlas-document-form divide-y divide-[var(--paper-border)]">
               {items.map((item) => (
                 <div className="py-3" key={item.id}>
                   <form action={updatePurchaseRequestItemAction} className="grid gap-3 md:grid-cols-[2fr_0.7fr_0.7fr_1fr_auto]">
@@ -176,7 +178,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
               ))}
             </div>
           ) : (
-            <DataTable minWidth={760}>
+            <DataTable minWidth={760} surface="paper">
               <thead className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.05em] text-[var(--text-muted)]"><tr><th className="px-1 py-3 font-medium">Descrição</th><th className="px-3 py-3 text-right font-medium">Quantidade</th><th className="px-3 py-3 font-medium">Unidade</th><th className="px-3 py-3 text-right font-medium">Preço unitário</th><th className="px-1 py-3 text-right font-medium">Total</th></tr></thead>
               <tbody className="divide-y divide-[var(--border)]">{items.map((item) => <tr key={item.id}><td className="px-1 py-3 font-medium">{item.description}</td><td className="atlas-tabular px-3 py-3 text-right">{item.quantity}</td><td className="px-3 py-3 text-[var(--text-secondary)]">{item.unit}</td><td className="px-3 py-3 text-right"><Money currency={request.currency} value={item.estimatedUnitPrice} /></td><td className="px-1 py-3 text-right"><Money currency={request.currency} strong value={item.quantity * item.estimatedUnitPrice} /></td></tr>)}</tbody>
               <tfoot className="border-t border-[var(--border-strong)]"><tr><td className="px-1 py-3 text-right font-medium" colSpan={4}>Total estimado</td><td className="px-1 py-3 text-right"><Money currency={request.currency} strong value={request.estimatedTotal} /></td></tr></tfoot>
@@ -198,7 +200,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
 
       <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="approvals">
         <SectionHeader title="Aprovações" />
-        <div className="mt-4 max-w-2xl">
+        <div className="atlas-document-summary mt-4 max-w-2xl">
           <ApprovalTimeline steps={approvalSteps(request.status, request.submittedAt, decisions)} />
         </div>
         {request.status === 'financial_review' && settings ? <p className="mt-4 text-[11px] text-[var(--text-muted)]">Limite executivo: <Money currency={settings.currency} value={settings.executiveApprovalThreshold} />. Moeda diferente exige revisão executiva.</p> : null}
@@ -210,7 +212,7 @@ export default async function PurchaseRequestPage({ params, searchParams }: Prop
 
       <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="activity">
         <SectionHeader title="Atividade" />
-        <div className="mt-2">
+        <div className="atlas-document-summary mt-2">
           <ActivityList items={audit.map((entry) => ({
             text: entry.action,
             time: new Date(entry.createdAt).toLocaleString('pt-PT'),

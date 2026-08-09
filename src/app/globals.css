@@ -14,10 +14,10 @@
   --warning: #bb741d;
   --danger: #b34a46;
   --info: #3f7cab;
-  --paper: #f5f0e6;
-  --paper-strong: #ebe2d2;
-  --paper-border: #cfc3b0;
-  --paper-shadow: 0 1px 0 rgb(67 55 39 / 10%);
+  --paper: #f6f0e5;
+  --paper-strong: #ece2d1;
+  --paper-border: #cdbfa9;
+  --paper-shadow: 0 1px 1px rgb(67 55 39 / 10%), 0 8px 22px rgb(67 55 39 / 6%);
   --radius-sm: 3px;
   --radius-md: 5px;
   --sidebar-width: 244px;
@@ -96,6 +96,62 @@ summary {
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--paper) 62%, var(--surface));
   box-shadow: var(--paper-shadow);
+}
+
+.atlas-document-sheet {
+  position: relative;
+  border: 1px solid var(--paper-border);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 72%, white);
+  box-shadow: var(--paper-shadow);
+}
+
+.atlas-document-sheet-header {
+  padding: 22px 24px 0;
+}
+
+.atlas-document-sheet-header > header {
+  border-bottom-color: var(--paper-border);
+}
+
+.atlas-document-summary {
+  border: 1px solid var(--paper-border);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 54%, white);
+  box-shadow: 0 1px 1px rgb(67 55 39 / 7%);
+  padding: 16px 18px;
+}
+
+.atlas-document-table {
+  background: color-mix(in srgb, var(--paper) 68%, white);
+}
+
+.atlas-document-table thead {
+  background: color-mix(in srgb, var(--paper-strong) 52%, white);
+}
+
+.atlas-document-table tbody tr,
+.atlas-document-table tfoot tr {
+  background: transparent;
+  transition: background-color 140ms ease;
+}
+
+.atlas-document-table tbody tr:hover {
+  background: color-mix(in srgb, var(--paper-strong) 36%, white);
+}
+
+.atlas-document-table tbody,
+.atlas-document-table thead,
+.atlas-document-table tfoot {
+  border-color: var(--paper-border);
+}
+
+.atlas-document-form {
+  border: 1px solid var(--paper-border);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper) 58%, white);
+  box-shadow: var(--paper-shadow);
+  padding: 22px;
 }
 
 .atlas-paper-row {

@@ -89,7 +89,7 @@ export function GoodsReceiptForm({
         <section className="mt-5">
           <SectionHeader title="Itens a receber" />
           <div className="mt-3 border-y border-[var(--border)]">
-            <DataTable minWidth={900}>
+            <DataTable minWidth={900} surface="paper">
               <thead className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.05em] text-[var(--text-muted)]"><tr><th className="px-2 py-3 font-medium">Item</th><th className="px-3 py-3 text-right font-medium">Encomendado</th><th className="px-3 py-3 text-right font-medium">Já recebido</th><th className="px-3 py-3 text-right font-medium">Pendente</th><th className="px-3 py-3 font-medium">Receber agora</th><th className="px-2 py-3 font-medium"><span className="sr-only">Ação</span></th></tr></thead>
               <tbody className="divide-y divide-[var(--border)]">
                 {items.map((item) => {
