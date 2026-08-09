@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 
+import { RouteMotion } from '@/components/atlas/route-motion'
+
 import './globals.css'
 
 const geistSans = Geist({
@@ -15,8 +17,12 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Atlas',
-  description: 'Plataforma operacional para equipas de construção.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  title: {
+    default: 'Atlas',
+    template: '%s | Atlas',
+  },
+  description: 'Plataforma operacional para empresas que precisam de controlo, rastreabilidade e decisões claras.',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -25,7 +31,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       lang="pt"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <RouteMotion />
+        {children}
+      </body>
     </html>
   )
 }

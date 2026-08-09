@@ -72,7 +72,7 @@ export function QuotationForm({ purchaseRequestId, suppliers, requestItems }: Pr
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
-        <div className="text-sm text-[var(--text-secondary)]"><span>Subtotal visual: {subtotal.toLocaleString('pt-PT')} {currency}</span><span className="ml-5 font-semibold text-[var(--text-primary)]">Total visual: {total.toLocaleString('pt-PT')} {currency}</span><p className="mt-1 text-xs text-[var(--text-muted)]">O servidor recalcula os valores a partir das linhas.</p></div>
+        <div className="text-sm text-[var(--text-secondary)]"><span>Subtotal visual: {subtotal.toLocaleString('pt-PT')} {currency}</span><span className="atlas-money-paper ml-5 font-semibold text-[var(--text-primary)]">Total visual: {total.toLocaleString('pt-PT')} {currency}</span><p className="mt-1 text-xs text-[var(--text-muted)]">O servidor recalcula os valores a partir das linhas.</p></div>
         <button className="atlas-button atlas-button-primary" type="submit">Registar cotação</button>
       </div>
     </form>

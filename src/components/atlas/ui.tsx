@@ -88,7 +88,7 @@ export function Money({ value, currency, strong = false }: { value: number; curr
     currency,
     maximumFractionDigits: 2,
   }).format(value)
-  return <span className={`atlas-money whitespace-nowrap ${strong ? 'font-semibold text-[var(--text-primary)]' : ''}`}>{formatted}</span>
+  return <span className={`atlas-money whitespace-nowrap ${strong ? 'atlas-money-paper font-semibold text-[var(--text-primary)]' : ''}`}>{formatted}</span>
 }
 
 export function DataTable({ children, minWidth = 760 }: { children: ReactNode; minWidth?: number }) {

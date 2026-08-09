@@ -16,6 +16,7 @@ on:
       - sprint4-purchase-orders-receipts
       - sprint5-ux-application-shell
       - sprint6-pilot-readiness
+      - sprint7-public-landing
 
 permissions:
   contents: read
@@ -94,6 +95,18 @@ jobs:
           test -f docs/pilot/pilot-checklist.md
           test -f docs/operations/backup-restore.md
           test -f docs/operations/demo-environment.md
+
+      - name: Verify Sprint 7 structure
+        run: |
+          test -f supabase/migrations/20260809203921_public_demo_requests.sql
+          test -f supabase/tests/landing_demo_requests_integration.sql
+          test -f supabase/tests/landing_demo_requests_rls.sql
+          test -f src/modules/marketing/contracts/demo-request.ts
+          test -f src/modules/marketing/presentation/demo-request-form.tsx
+          test -f public/landing/purchase-request-detail.png
+          test -f public/landing/supplier-comparison.png
+          test -f public/landing/purchase-order-detail.png
+          test -f tests/landing-flow.mjs
 
       - name: Verify security and scope boundaries
         run: |
@@ -183,7 +196,7 @@ jobs:
         run: cat /tmp/atlas-app.log || true
 
       - name: Lint database schemas
-        run: pnpm exec supabase db lint --local --schema identity,projects,procurement,documents,notifications,audit,platform --fail-on error
+        run: pnpm exec supabase db lint --local --schema public,identity,projects,procurement,documents,notifications,audit,platform --fail-on error
 
       - name: Run database advisors
         run: pnpm exec supabase db advisors --local

@@ -151,7 +151,7 @@ export function PurchaseRequestCreateForm({ projects, action }: Props) {
         <div className="mt-5 flex justify-end text-right">
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Total calculado</p>
-            <p className="mt-1 text-2xl font-semibold" data-testid="request-total">{total.toLocaleString('pt-PT', { maximumFractionDigits: 2 })}</p>
+            <p className="atlas-money-paper mt-1 text-2xl font-semibold" data-testid="request-total">{total.toLocaleString('pt-PT', { maximumFractionDigits: 2 })}</p>
           </div>
         </div>
       </section>
