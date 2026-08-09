@@ -56,7 +56,7 @@ export async function uploadDocumentAction(formData: FormData) {
       contentType: file.type,
       upsert: false,
     })
-    if (error) throw new Error(`storage_upload_failed:${error.code ?? 'unknown'}`)
+    if (error) throw new Error(`storage_upload_failed:${error.message}`)
     await FinalizeDocumentUpload(prepared.document_id)
   } catch (error) {
     if (prepared) {

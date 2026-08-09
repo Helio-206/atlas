@@ -12,10 +12,10 @@ importers:
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@supabase/ssr':
-        specifier: ^0.12.3
+        specifier: 0.12.4
         version: 0.12.4(@supabase/supabase-js@2.112.2)
       '@supabase/supabase-js':
-        specifier: ^2.110.8
+        specifier: 2.112.2
         version: 2.112.2
       next:
         specifier: 16.3.0
@@ -30,44 +30,44 @@ importers:
         specifier: 0.0.1
         version: 0.0.1
       zod:
-        specifier: ^4.4.3
+        specifier: 4.4.3
         version: 4.4.3
     devDependencies:
       '@tailwindcss/postcss':
-        specifier: ^4
+        specifier: 4.3.3
         version: 4.3.3
       '@types/node':
-        specifier: ^20
+        specifier: 20.19.43
         version: 20.19.43
       '@types/react':
-        specifier: ^19
+        specifier: 19.2.18
         version: 19.2.18
       '@types/react-dom':
-        specifier: ^19
+        specifier: 19.2.4
         version: 19.2.4(@types/react@19.2.18)
       '@vitest/coverage-v8':
-        specifier: ^4.1.10
+        specifier: 4.1.10
         version: 4.1.10(vitest@4.1.10)
       eslint:
-        specifier: ^9
+        specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
         specifier: 16.3.0
         version: 16.3.0(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       playwright:
-        specifier: ^1.62.0
+        specifier: 1.62.1
         version: 1.62.1
       supabase:
-        specifier: ^2.110.0
+        specifier: 2.111.0
         version: 2.111.0
       tailwindcss:
-        specifier: ^4
+        specifier: 4.3.3
         version: 4.3.3
       typescript:
-        specifier: ^5
+        specifier: 5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: 4.1.10
         version: 4.1.10(@types/node@20.19.43)(@vitest/coverage-v8@4.1.10)(vite@8.2.1(@types/node@20.19.43)(jiti@2.7.0))
 
 packages:

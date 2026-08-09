@@ -55,7 +55,7 @@ try {
   assert.match(await page.locator('main').innerText(), /Construtora Horizonte|Visão geral/)
 
   await page.goto(`${baseUrl}/dashboard/procurement/new`)
-  await page.getByLabel('Projeto').selectOption({ label: 'Edifício Aurora' })
+  await page.getByLabel('Projeto').selectOption({ label: 'AUR-26 — Edifício Aurora' })
   const purpose = `Pilot journey ${Date.now()}`
   await page.getByLabel('Finalidade').fill(purpose)
   await page.getByLabel('Prioridade').selectOption('high')
@@ -109,8 +109,7 @@ try {
   assert.match(comparison, /ConstruSul/)
   assert.match(comparison, /Menor preço/)
   const selection = page.locator('section', { hasText: 'Selecionar fornecedor' })
-  const novaCard = selection.locator('div', { hasText: 'NovaBetão, Lda.' }).filter({ has: page.getByRole('button', { name: 'Selecionar' }) }).first()
-  await novaCard.getByRole('button', { name: 'Selecionar' }).click()
+  await selection.getByRole('button', { name: 'Selecionar' }).first().click()
   await selection.getByLabel('Justificação (obrigatória)').fill('Melhor preço com cobertura integral e prazo adequado.')
   await selection.getByRole('button', { name: 'Confirmar seleção' }).click()
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'supplier_selected')

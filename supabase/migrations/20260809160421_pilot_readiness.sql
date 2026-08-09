@@ -299,14 +299,17 @@ security definer
 set search_path=''
 as $$
 begin
+  if auth.uid() is null then
+    return;
+  end if;
   if not platform.can_access_document_resource(p_resource_type,p_resource_id,'view') then
-    raise exception using errcode='42501',message='document_view_forbidden';
+    return;
   end if;
   return query
   select f.id,f.original_name,f.mime_type,f.size_bytes,f.uploaded_by,f.created_at
   from documents.files f
   where f.resource_type=p_resource_type and f.resource_id=p_resource_id and f.status='ready'
-    and f.company_id=platform.current_company_id()
+    and f.company_id=(select ctx.company_id from platform.document_resource_context(p_resource_type,p_resource_id) ctx)
   order by f.created_at desc,f.id desc;
 end;
 $$;
@@ -549,7 +552,7 @@ language plpgsql stable security definer set search_path=''
 as $$declare v_company uuid;begin
   if platform.current_procurement_role()<>'administrator' then raise exception using errcode='42501',message='administrator_required'; end if;
   v_company:=platform.current_company_id();
-  return query select m.id,m.user_id,p.full_name,u.email,m.role,m.status,m.created_at
+  return query select m.id,m.user_id,p.full_name,u.email::text,m.role,m.status,m.created_at
   from identity.memberships m join auth.users u on u.id=m.user_id left join identity.profiles p on p.id=m.user_id
   where m.company_id=v_company order by p.full_name nulls last,u.email;
 end;$$;
@@ -689,16 +692,16 @@ security definer
 set search_path=''
 as $$
 declare
-  c constant uuid:='d0000000-0000-4000-8000-000000000001';
-  p1 constant uuid:='d1000000-0000-4000-8000-000000000001';
-  p2 constant uuid:='d1000000-0000-4000-8000-000000000002';
-  p3 constant uuid:='d1000000-0000-4000-8000-000000000003';
+  c constant uuid:='d0000000-0000-4000-8000-000000000001'::uuid;
+  p1 constant uuid:='d1000000-0000-4000-8000-000000000001'::uuid;
+  p2 constant uuid:='d1000000-0000-4000-8000-000000000002'::uuid;
+  p3 constant uuid:='d1000000-0000-4000-8000-000000000003'::uuid;
   u_admin uuid;u_project uuid;u_requester uuid;u_technical uuid;u_finance uuid;u_director uuid;u_procurement uuid;u_warehouse uuid;
-  s1 constant uuid:='d2000000-0000-4000-8000-000000000001';
-  s2 constant uuid:='d2000000-0000-4000-8000-000000000002';
-  s3 constant uuid:='d2000000-0000-4000-8000-000000000003';
-  s4 constant uuid:='d2000000-0000-4000-8000-000000000004';
-  s5 constant uuid:='d2000000-0000-4000-8000-000000000005';
+  s1 constant uuid:='d2000000-0000-4000-8000-000000000001'::uuid;
+  s2 constant uuid:='d2000000-0000-4000-8000-000000000002'::uuid;
+  s3 constant uuid:='d2000000-0000-4000-8000-000000000003'::uuid;
+  s4 constant uuid:='d2000000-0000-4000-8000-000000000004'::uuid;
+  s5 constant uuid:='d2000000-0000-4000-8000-000000000005'::uuid;
 begin
   select id into u_admin from auth.users where email='admin@atlas.demo';
   select id into u_project from auth.users where email='project.manager@atlas.demo';
@@ -747,7 +750,11 @@ begin
     (c,u_procurement,'procurement_officer','active'),(c,u_warehouse,'warehouse_operator','active');
 
   insert into procurement.approval_settings(company_id,executive_approval_threshold,currency,updated_at)
-  values(c,5000000,'AOA',now());
+  values(c,5000000,'AOA',now())
+  on conflict (company_id) do update set
+    executive_approval_threshold=excluded.executive_approval_threshold,
+    currency=excluded.currency,
+    updated_at=excluded.updated_at;
 
   insert into projects.projects(id,company_id,code,name,client_name,location,start_date,end_date,status,created_by,created_at,updated_at,version) values
     (p1,c,'AUR-26','Edifício Aurora','Horizonte Imobiliária','Talatona, Luanda','2026-01-15','2027-08-30','active',u_project,now()-interval '120 days',now(),2),
@@ -879,6 +886,7 @@ end;
 $$;
 revoke all on function platform.seed_atlas_demo_data() from public,anon,authenticated;
 grant execute on function platform.seed_atlas_demo_data() to service_role;
+grant usage on schema platform to service_role;
 create or replace function public.seed_atlas_demo_data()
 returns void language sql security invoker set search_path='' as $$select platform.seed_atlas_demo_data();$$;
 revoke all on function public.seed_atlas_demo_data() from public,anon,authenticated;
@@ -905,3 +913,46 @@ create or replace function public.seed_atlas_demo_document(resource_type text,re
 returns uuid language sql security invoker set search_path='' as $$select platform.seed_atlas_demo_document($1,$2,$3,$4,$5,$6,$7);$$;
 revoke all on function public.seed_atlas_demo_document(text,uuid,text,text,text,bigint,text) from public,anon,authenticated;
 grant execute on function public.seed_atlas_demo_document(text,uuid,text,text,text,bigint,text) to service_role;
+
+create or replace function platform.list_purchase_request_audit(p_purchase_request_id uuid)
+returns table(action text,user_id uuid,metadata jsonb,created_at timestamptz)
+language plpgsql stable security definer set search_path=''
+as $$
+declare
+  v_company_id uuid;
+begin
+  perform platform.require_procurement_permission('Procurement.View');
+  v_company_id:=platform.current_company_id();
+  if not exists(
+    select 1 from procurement.purchase_requests request
+    where request.id=p_purchase_request_id and request.company_id=v_company_id
+  ) then
+    raise exception using errcode='P0001',message='purchase_request_not_found';
+  end if;
+  return query
+  select entry.action,entry.user_id,entry.metadata,entry.created_at
+  from audit.entries entry
+  where entry.company_id=v_company_id
+    and entry.module='procurement'
+    and (
+      (entry.resource_type='purchase_request' and entry.resource_id=p_purchase_request_id)
+      or (entry.resource_type='purchase_order' and exists(
+        select 1 from procurement.purchase_orders purchase_order
+        where purchase_order.id=entry.resource_id
+          and purchase_order.purchase_request_id=p_purchase_request_id
+          and purchase_order.company_id=v_company_id
+      ))
+      or (entry.resource_type='goods_receipt' and exists(
+        select 1
+        from procurement.goods_receipts receipt
+        join procurement.purchase_orders purchase_order
+          on purchase_order.id=receipt.purchase_order_id
+         and purchase_order.company_id=receipt.company_id
+        where receipt.id=entry.resource_id
+          and purchase_order.purchase_request_id=p_purchase_request_id
+          and receipt.company_id=v_company_id
+      ))
+    )
+  order by entry.created_at,entry.id;
+end;
+$$;
