@@ -1,3 +1,5 @@
+import { StatusBadge } from '@/components/atlas/ui'
+
 import type { PurchaseRequestStatus } from '../domain/purchase-request'
 
 const labels: Record<PurchaseRequestStatus, string> = {
@@ -17,11 +19,7 @@ const labels: Record<PurchaseRequestStatus, string> = {
 }
 
 export function PurchaseRequestStatusBadge({ status }: { status: PurchaseRequestStatus }) {
-  return (
-    <span className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-300">
-      {labels[status]}
-    </span>
-  )
+  return <StatusBadge label={labels[status]} tone={statusTone(status)} />
 }
 
 export function formatMoney(value: number, currency: string) {
@@ -36,5 +34,13 @@ export function statusLabel(status: PurchaseRequestStatus) {
   return labels[status]
 }
 
-export const inputClass = 'w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-zinc-500'
-export const labelClass = 'mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500'
+export const inputClass = 'atlas-input'
+export const labelClass = 'atlas-label'
+
+function statusTone(status: PurchaseRequestStatus) {
+  if (['approved', 'received', 'supplier_selected'].includes(status)) return 'success' as const
+  if (['rejected', 'cancelled'].includes(status)) return 'danger' as const
+  if (['financial_review', 'executive_review', 'partially_received'].includes(status)) return 'warning' as const
+  if (['technical_review', 'submitted', 'ordered'].includes(status)) return 'info' as const
+  return 'neutral' as const
+}

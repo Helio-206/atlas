@@ -35,6 +35,7 @@ async function createSupplier(page, { name, taxNumber }) {
 
 async function createQuotation(page, { supplierName, number, prices, partial = false, deliveryDays }) {
   await page.goto(`${baseUrl}${quotationsPath}`)
+  await page.getByText('Registar nova cotação').click()
   const quotationForm = page.locator('form', { has: page.getByRole('button', { name: 'Registar cotação' }) })
   await quotationForm.getByLabel('Fornecedor').selectOption({ label: supplierName })
   await quotationForm.getByLabel('Número da cotação').fill(number)
@@ -58,12 +59,12 @@ async function createQuotation(page, { supplierName, number, prices, partial = f
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'quotation_created')
   const text = await page.locator('main').innerText()
   assert.match(text, new RegExp(supplierName))
-  if (partial) assert.match(text, /Partial quotation/)
+  if (partial) assert.match(text, /item não cotado/)
 
-  const draftRow = page.locator('tr', { hasText: supplierName })
-  await draftRow.getByRole('button', { name: 'Submit quotation' }).click()
+  const draftColumn = page.locator('th', { has: page.getByRole('button', { name: 'Submeter cotação' }) })
+  await draftColumn.getByRole('button', { name: 'Submeter cotação' }).click()
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'quotation_submitted')
-  assert.match(await page.locator('tr', { hasText: supplierName }).innerText(), /submitted/i)
+  assert.match(await page.locator('main').innerText(), new RegExp(`${supplierName}[\\s\\S]*submitted`, 'i'))
 }
 
 const browser = await chromium.launch({ headless: true })
@@ -100,10 +101,10 @@ try {
   const comparisonText = await page.locator('main').innerText()
   assert.match(comparisonText, /Supplier A E2E/)
   assert.match(comparisonText, /Supplier B E2E/)
-  assert.match(comparisonText, /Lowest Price/)
-  assert.match(comparisonText, /Fastest Delivery/)
-  assert.match(comparisonText, /Best Coverage/)
-  assert.match(comparisonText, /Partial quotation/)
+  assert.match(comparisonText, /Menor preço/)
+  assert.match(comparisonText, /Entrega mais rápida/)
+  assert.match(comparisonText, /Cobertura completa/)
+  assert.match(comparisonText, /item não cotado/)
 
   await page.goto(`${baseUrl}${supplierBPath}`)
   await page.getByRole('button', { name: 'Bloquear' }).click()
@@ -111,13 +112,13 @@ try {
   assert.match(await page.locator('main').innerText(), /blocked/i)
 
   await page.goto(`${baseUrl}${quotationsPath}`)
-  const blockedRow = page.locator('tr', { hasText: 'Supplier B E2E' })
-  assert.match(await blockedRow.innerText(), /Blocked supplier cannot be selected\./)
-  assert.equal(await blockedRow.getByRole('button', { name: 'Select supplier' }).count(), 0)
+  const selectionSection = page.locator('section', { hasText: 'Selecionar fornecedor' })
+  assert.match(await selectionSection.innerText(), /Fornecedor bloqueado/)
+  assert.equal(await selectionSection.getByRole('button', { name: 'Selecionar' }).count(), 1)
 
-  const supplierARow = page.locator('tr', { hasText: 'Supplier A E2E' })
-  await supplierARow.getByPlaceholder('Justificação da seleção').fill('Melhor equilíbrio entre preço, cobertura e prazo.')
-  await supplierARow.getByRole('button', { name: 'Select supplier' }).click()
+  await selectionSection.getByRole('button', { name: 'Selecionar' }).click()
+  await selectionSection.getByLabel('Justificação (obrigatória)').fill('Melhor equilíbrio entre preço, cobertura e prazo.')
+  await selectionSection.getByRole('button', { name: 'Confirmar seleção' }).click()
   await page.waitForURL((url) => url.pathname === quotationsPath && url.searchParams.get('notice') === 'supplier_selected')
   const selectedText = await page.locator('main').innerText()
   assert.match(selectedText, /selected supplier/i)

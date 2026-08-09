@@ -1,6 +1,15 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import type { ReactNode } from 'react'
 
+import {
+  Breadcrumbs,
+  DataTable,
+  Money,
+  PageHeader,
+  SectionHeader,
+  StatusBadge,
+} from '@/components/atlas/ui'
 import {
   GetPurchaseRequest,
   ListPurchaseRequestItems,
@@ -8,16 +17,16 @@ import {
 import {
   GetQuotationComparison,
   GetSupplierSelection,
+  ListQuotationItems,
   ListSuppliers,
 } from '@/modules/procurement/application/sourcing-use-cases'
 import { requireProcurementAccess } from '@/modules/procurement/presentation/access'
-import { formatMoney } from '@/modules/procurement/presentation/components'
 import { QuotationForm } from '@/modules/procurement/presentation/quotation-form'
 import {
-  selectSupplierAction,
   submitQuotationAction,
 } from '@/modules/procurement/presentation/sourcing-actions'
 import { getSourcingError, getSourcingNotice } from '@/modules/procurement/presentation/sourcing-feedback'
+import { SupplierSelectionPanel } from '@/modules/procurement/presentation/supplier-selection-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,15 +35,9 @@ type Props = {
   searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }>
 }
 
-function coverageLabel(percent: number) {
-  return percent >= 100 ? 'Full quotation' : `Partial quotation · ${percent.toFixed(0)}%`
-}
-
 export default async function QuotationsPage({ params, searchParams }: Props) {
   const access = await requireProcurementAccess()
-  if (!access.can('Procurement.QuotationView')) {
-    return <main className="min-h-screen bg-zinc-950 p-12 text-zinc-100">Sem permissão para consultar cotações.</main>
-  }
+  if (!access.can('Procurement.QuotationView')) return <main><p className="atlas-notice">Sem permissão para consultar cotações.</p></main>
 
   const { id } = await params
   const [request, items, comparison, selection, suppliers, query] = await Promise.all([
@@ -47,73 +50,124 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
   ])
   if (!request) notFound()
 
+  const quotationItems = await Promise.all(
+    comparison.quotations.map(async (quotation) => [quotation.id, await ListQuotationItems(quotation.id)] as const),
+  )
+  const itemMap = new Map(quotationItems)
   const error = getSourcingError(query.error)
   const notice = getSourcingNotice(query.notice)
   const canManageQuotation = access.can('Procurement.QuotationManage') && request.status === 'approved'
   const canSelect = access.can('Procurement.SupplierSelect') && request.status === 'approved' && !selection
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-6 py-12 text-zinc-100">
-      <section className="mx-auto max-w-7xl">
-        <header className="flex flex-wrap items-start justify-between gap-5 border-b border-zinc-800 pb-8">
-          <div>
-            <Link className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500" href={`/dashboard/procurement/${request.id}`}>{request.requestNumber}</Link>
-            <h1 className="mt-3 text-3xl font-semibold">Comparação de cotações</h1>
-            <p className="mt-2 text-sm text-zinc-400">Compare preço, prazo e cobertura. A decisão final continua humana.</p>
-          </div>
-          <Link className="rounded-lg border border-zinc-700 px-4 py-2 text-sm" href="/dashboard/suppliers">Fornecedores</Link>
-        </header>
+    <main>
+      <Breadcrumbs items={[
+        { label: 'Compras' },
+        { label: 'Solicitações', href: '/dashboard/procurement' },
+        { label: request.requestNumber, href: `/dashboard/procurement/${request.id}` },
+        { label: 'Cotações' },
+      ]} />
+      <PageHeader
+        actions={<Link className="atlas-button" href={`/dashboard/procurement/${request.id}`}>Voltar à solicitação</Link>}
+        description={<><span>{request.requestNumber} — {request.purpose}</span><span className="mt-1 block">Projeto: {request.projectName}</span></>}
+        title="Comparação de fornecedores"
+      />
 
-        {error ? <div className="mt-6 rounded-lg border border-red-900/70 bg-red-950/40 px-4 py-3 text-sm text-red-200" role="alert">{error}</div> : null}
-        {notice ? <div className="mt-6 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-300" role="status">{notice}</div> : null}
-        {comparison.highlights.currencyWarning ? <div className="mt-6 rounded-lg border border-amber-900/70 bg-amber-950/30 px-4 py-3 text-sm text-amber-200" role="note">{comparison.highlights.currencyWarning}</div> : null}
+      {error ? <div className="atlas-notice atlas-notice-error mt-4" role="alert">{error}</div> : null}
+      {notice ? <div className="atlas-notice mt-4" role="status">{notice}</div> : null}
 
-        {selection ? (
-          <section className="mt-8 rounded-2xl border border-emerald-900/70 bg-emerald-950/20 p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Selected Supplier</p>
-            <div className="mt-4 grid gap-4 md:grid-cols-3"><div><p className="text-xs text-zinc-500">Supplier</p><p className="mt-1 font-semibold">{selection.supplierName}</p></div><div><p className="text-xs text-zinc-500">Quotation</p><p className="mt-1">{selection.quotationNumber ?? 'Sem número'} · {formatMoney(selection.total, selection.currency)}</p></div><div><p className="text-xs text-zinc-500">Selected By / Date</p><p className="mt-1">{selection.selectedByName ?? selection.selectedBy} · {new Date(selection.selectedAt).toLocaleString('pt-PT')}</p></div></div>
-            <p className="mt-4 text-sm text-zinc-300"><span className="text-zinc-500">Justification:</span> {selection.justification}</p>
-          </section>
-        ) : null}
-
-        <section className="mt-8 overflow-x-auto rounded-2xl border border-zinc-800">
-          <table className="min-w-[1050px] w-full text-left text-sm">
-            <thead className="bg-zinc-900 text-xs uppercase tracking-wider text-zinc-500"><tr><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Currency</th><th className="px-4 py-3">Delivery Days</th><th className="px-4 py-3">Valid Until</th><th className="px-4 py-3">Payment Terms</th><th className="px-4 py-3">Coverage</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Actions</th></tr></thead>
-            <tbody className="divide-y divide-zinc-800">
-              {comparison.quotations.map((quotation) => {
-                const coverage = quotation.coveragePercent ?? 0
-                const tags = [
-                  comparison.highlights.lowestPriceId === quotation.id ? 'Lowest Price' : null,
-                  comparison.highlights.fastestDeliveryId === quotation.id ? 'Fastest Delivery' : null,
-                  comparison.highlights.bestCoverageId === quotation.id ? 'Best Coverage' : null,
-                ].filter(Boolean)
-                return (
-                  <tr key={quotation.id} className="align-top">
-                    <td className="px-4 py-4"><div className="font-medium">{quotation.supplierName}</div><div className="mt-1 text-xs capitalize text-zinc-500">{quotation.supplierStatus}</div>{tags.length ? <div className="mt-2 flex flex-wrap gap-1">{tags.map((tag) => <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-300" key={tag}>{tag}</span>)}</div> : null}</td>
-                    <td className="px-4 py-4 font-semibold">{formatMoney(quotation.total, quotation.currency)}</td>
-                    <td className="px-4 py-4">{quotation.currency}</td>
-                    <td className="px-4 py-4">{quotation.deliveryDays ?? '—'}</td>
-                    <td className="px-4 py-4">{quotation.validUntil ?? '—'}</td>
-                    <td className="max-w-48 px-4 py-4 text-zinc-400">{quotation.paymentTerms ?? '—'}</td>
-                    <td className="px-4 py-4"><span className={coverage < 100 ? 'text-amber-300' : 'text-zinc-300'}>{coverageLabel(coverage)}</span></td>
-                    <td className="px-4 py-4 capitalize">{quotation.status}</td>
-                    <td className="px-4 py-4">
-                      <div className="space-y-3">
-                        {canManageQuotation && quotation.status === 'draft' ? <form action={submitQuotationAction}><input name="purchase_request_id" type="hidden" value={request.id} /><input name="quotation_id" type="hidden" value={quotation.id} /><input name="expected_version" type="hidden" value={quotation.version} /><button className="rounded-lg border border-zinc-700 px-3 py-2 text-xs" type="submit">Submit quotation</button></form> : null}
-                        {canSelect && quotation.status === 'submitted' && quotation.supplierStatus !== 'blocked' ? <form action={selectSupplierAction} className="min-w-56 space-y-2"><input name="purchase_request_id" type="hidden" value={request.id} /><input name="quotation_id" type="hidden" value={quotation.id} /><input name="expected_request_version" type="hidden" value={request.version} /><input name="expected_quotation_version" type="hidden" value={quotation.version} /><textarea className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs" name="justification" placeholder="Justificação da seleção" required rows={2} /><button className="w-full rounded-lg bg-zinc-100 px-3 py-2 text-xs font-semibold text-zinc-950" type="submit">Select supplier</button></form> : null}
-                        {canSelect && quotation.supplierStatus === 'blocked' ? <span className="text-xs text-red-300">Blocked supplier cannot be selected.</span> : null}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {comparison.quotations.length === 0 ? <tr><td className="px-4 py-8 text-center text-zinc-500" colSpan={9}>Ainda não existem cotações.</td></tr> : null}
-            </tbody>
-          </table>
-        </section>
-
-        {canManageQuotation ? <QuotationForm purchaseRequestId={request.id} requestItems={items.map((item) => ({ id: item.id, description: item.description, quantity: item.quantity, unit: item.unit }))} suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name, status: supplier.status }))} /> : null}
+      <section aria-label="Contexto da solicitação" className="mt-4 grid grid-cols-2 border-y border-[var(--border)] md:grid-cols-5">
+        <Context label="Valor estimado" value={<Money currency={request.currency} value={request.estimatedTotal} />} />
+        <Context label="Itens" value={items.length} />
+        <Context label="Cotações" value={comparison.quotations.length} />
+        <Context label="Data necessária" value={new Date(`${request.requiredDate}T00:00:00`).toLocaleDateString('pt-PT')} />
+        <Context label="Estado" value={<StatusBadge label="Aprovada" tone="success" />} />
       </section>
+
+      <section className="mt-5">
+        <SectionHeader title="Comparação de cotações" />
+        <div className="mt-3 border-y border-[var(--border)]">
+          <DataTable minWidth={900}>
+            <thead className="border-b border-[var(--border)]">
+              <tr>
+                <th className="w-[21%] px-3 py-3 text-[10px] font-medium uppercase tracking-[0.05em] text-[var(--text-muted)]">Critério</th>
+                {comparison.quotations.map((quotation) => (
+                  <th className="px-3 py-3 text-center font-medium" key={quotation.id}>
+                    <span>{quotation.supplierName}</span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-[var(--text-muted)]">{quotation.quotationNumber ?? 'Sem número'}</span>
+                    <span className="mt-1 block text-[10px] font-normal capitalize text-[var(--text-muted)]">{quotation.status}</span>
+                    {canManageQuotation && quotation.status === 'draft' ? (
+                      <form action={submitQuotationAction} className="mt-2">
+                        <input name="purchase_request_id" type="hidden" value={request.id} />
+                        <input name="quotation_id" type="hidden" value={quotation.id} />
+                        <input name="expected_version" type="hidden" value={quotation.version} />
+                        <button className="text-[10px] font-normal text-[var(--info)] hover:underline" type="submit">Submeter cotação</button>
+                      </form>
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              <ComparisonRow label="Preço total">{comparison.quotations.map((quotation) => <Cell key={quotation.id}><Money currency={quotation.currency} strong value={quotation.total} />{comparison.highlights.sameCurrency && comparison.highlights.lowestPriceId === quotation.id ? <Highlight>Menor preço</Highlight> : null}</Cell>)}</ComparisonRow>
+              <ComparisonRow label="Prazo de entrega">{comparison.quotations.map((quotation) => <Cell key={quotation.id}>{quotation.deliveryDays === null ? '—' : `${quotation.deliveryDays} dias`}{comparison.highlights.fastestDeliveryId === quotation.id ? <Highlight>Entrega mais rápida</Highlight> : null}</Cell>)}</ComparisonRow>
+              <ComparisonRow label="Cobertura">{comparison.quotations.map((quotation) => { const coverage = quotation.coveragePercent ?? 0; return <Cell key={quotation.id}>{coverage.toFixed(0)}%{coverage >= 100 ? <Highlight>Cobertura completa</Highlight> : <span className="mt-0.5 block text-[10px] text-[var(--danger)]">{Math.max(0, items.length - (quotation.coverageCount ?? 0))} item não cotado</span>}</Cell> })}</ComparisonRow>
+              <ComparisonRow label="Validade">{comparison.quotations.map((quotation) => <Cell key={quotation.id}>{quotation.validUntil ? new Date(`${quotation.validUntil}T00:00:00`).toLocaleDateString('pt-PT') : '—'}</Cell>)}</ComparisonRow>
+              <ComparisonRow label="Condições de pagamento">{comparison.quotations.map((quotation) => <Cell key={quotation.id}>{quotation.paymentTerms ?? '—'}</Cell>)}</ComparisonRow>
+              <ComparisonRow label="Moeda">{comparison.quotations.map((quotation) => <Cell key={quotation.id}>{quotation.currency}</Cell>)}</ComparisonRow>
+            </tbody>
+          </DataTable>
+          {comparison.quotations.length === 0 ? <p className="py-8 text-center text-[12px] text-[var(--text-muted)]">Ainda não existem cotações.</p> : null}
+        </div>
+        {!comparison.highlights.sameCurrency ? (
+          <p className="mt-2 border-l-2 border-[var(--warning)] pl-3 text-[11px] leading-5 text-[var(--text-secondary)]">As cotações estão em moedas diferentes e não podem ser comparadas diretamente sem taxa de câmbio.</p>
+        ) : null}
+      </section>
+
+      {comparison.quotations.length ? (
+        <section className="mt-5">
+          <SectionHeader title="Comparação por item" />
+          <div className="mt-3 border-y border-[var(--border)]">
+            <DataTable minWidth={900}>
+              <thead className="border-b border-[var(--border)]"><tr><th className="px-2 py-3 text-[10px] font-medium uppercase tracking-[0.05em] text-[var(--text-muted)]">Item</th>{comparison.quotations.map((quotation) => <th className="px-3 py-3 text-center font-medium" key={quotation.id}>{quotation.supplierName}<span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">({quotation.currency})</span></th>)}</tr></thead>
+              <tbody className="divide-y divide-[var(--border)]">{items.map((item) => <tr key={item.id}><td className="px-2 py-3 font-medium">{item.description}</td>{comparison.quotations.map((quotation) => { const quoted = itemMap.get(quotation.id)?.find((candidate) => candidate.purchaseRequestItemId === item.id); return <td className="px-3 py-3 text-center" key={quotation.id}>{quoted ? <Money currency={quotation.currency} value={quoted.unitPrice} /> : <span className="text-[var(--danger)]">Não cotado</span>}</td> })}</tr>)}</tbody>
+            </DataTable>
+          </div>
+        </section>
+      ) : null}
+
+      {selection ? (
+        <section className="mt-5 border-l-2 border-[var(--success)] pl-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[var(--success)]">Selected Supplier</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12px]"><strong>{selection.supplierName}</strong><Money currency={selection.currency} strong value={selection.total} /><span className="text-[var(--text-muted)]">Selecionado por {selection.selectedByName ?? 'utilizador'} em {new Date(selection.selectedAt).toLocaleString('pt-PT')}</span></div>
+          <p className="mt-2 text-[12px] text-[var(--text-secondary)]"><span className="text-[var(--text-muted)]">Justificação:</span> {selection.justification}</p>
+        </section>
+      ) : canSelect ? (
+        <div className="mt-5"><SupplierSelectionPanel purchaseRequestId={request.id} quotations={comparison.quotations.filter((quotation) => quotation.status === 'submitted').map((quotation) => ({ id: quotation.id, supplierName: quotation.supplierName, supplierStatus: quotation.supplierStatus, total: quotation.total, currency: quotation.currency, version: quotation.version }))} requestVersion={request.version} /></div>
+      ) : null}
+
+      {canManageQuotation ? (
+        <details className="mt-6 border-t border-[var(--border)] pt-5">
+          <summary className="cursor-pointer text-[13px] font-medium">Registar nova cotação</summary>
+          <QuotationForm purchaseRequestId={request.id} requestItems={items.map((item) => ({ id: item.id, description: item.description, quantity: item.quantity, unit: item.unit }))} suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name, status: supplier.status }))} />
+        </details>
+      ) : null}
     </main>
   )
+}
+
+function Context({ label, value }: { label: string; value: ReactNode }) {
+  return <div className="border-r border-[var(--border)] px-5 py-4 last:border-r-0"><p className="text-[10px] text-[var(--text-muted)]">{label}</p><div className="mt-1 text-[13px] font-medium">{value}</div></div>
+}
+
+function ComparisonRow({ label, children }: { label: string; children: ReactNode }) {
+  return <tr><th className="px-3 py-3 font-normal text-[var(--text-secondary)]">{label}</th>{children}</tr>
+}
+
+function Cell({ children }: { children: ReactNode }) {
+  return <td className="px-3 py-3 text-center align-top">{children}</td>
+}
+
+function Highlight({ children }: { children: ReactNode }) {
+  return <span className="mt-0.5 block text-[10px] text-[var(--success)]">{children}</span>
 }

@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
+
+import { EmptyState, EntityLink, Money, SectionHeader, StatusBadge } from '@/components/atlas/ui'
 
 import {
   GetPurchaseOrderForPurchaseRequest,
@@ -12,7 +15,6 @@ import {
 } from '../application/sourcing-use-cases'
 import type { ProcurementPermission } from '../domain/permissions'
 import { issuePurchaseOrderAction } from './fulfillment-actions'
-import { formatMoney } from './components'
 
 export async function SourcingSummary({
   requestId,
@@ -28,7 +30,6 @@ export async function SourcingSummary({
     GetSupplierSelection(requestId),
     GetPurchaseRequest.execute(requestId),
   ])
-  const suppliers = [...new Set(quotations.map((quotation) => quotation.supplierName))]
   const purchaseOrder = permissions.includes('Procurement.PurchaseOrderView')
     ? await GetPurchaseOrderForPurchaseRequest(requestId)
     : null
@@ -41,66 +42,90 @@ export async function SourcingSummary({
       ])
     : [null, []]
 
-  const firstPartial = receipts.find((receipt) => receipt.status === 'partial')
-  const completedReceipt = receipts.find((receipt) => receipt.status === 'complete')
-  const timeline = [
-    { label: 'Requested', date: request?.createdAt ?? null },
-    { label: 'Approved', date: request?.approvedAt ?? null },
-    { label: 'Supplier Selected', date: selection?.selectedAt ?? null },
-    { label: 'Purchase Order Issued', date: purchaseOrder?.issuedAt ?? null },
-    { label: 'Partially Received', date: firstPartial?.receivedAt ?? null },
-    { label: 'Received', date: completedReceipt?.receivedAt ?? null },
-  ]
-
   return (
-    <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Quotations</p>
-          <h2 className="mt-2 text-lg font-semibold">Sourcing</h2>
-          <p className="mt-1 text-sm text-zinc-400">{quotations.length} cotação(ões) · {suppliers.length} fornecedor(es) participante(s)</p>
-        </div>
-        <Link className="rounded-lg border border-zinc-700 px-4 py-2 text-sm" href={`/dashboard/procurement/${requestId}/quotations`}>Abrir comparação</Link>
-      </div>
-
-      {quotations.length ? <div className="mt-4 flex flex-wrap gap-2">{quotations.map((quotation) => <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300" key={quotation.id}>{quotation.supplierName} · {quotation.status}</span>)}</div> : null}
-
-      {selection ? (
-        <div className="mt-6 border-t border-zinc-800 pt-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Selected Supplier</p>
-          <div className="mt-3 grid gap-4 md:grid-cols-3"><div><p className="text-xs text-zinc-500">Supplier</p><p className="mt-1 font-medium">{selection.supplierName}</p></div><div><p className="text-xs text-zinc-500">Quotation</p><p className="mt-1">{selection.quotationNumber ?? 'Sem número'} · {formatMoney(selection.total, selection.currency)}</p></div><div><p className="text-xs text-zinc-500">Selected By / Date</p><p className="mt-1 text-sm">{selection.selectedByName ?? selection.selectedBy} · {new Date(selection.selectedAt).toLocaleString('pt-PT')}</p></div></div>
-          <p className="mt-4 text-sm text-zinc-300"><span className="text-zinc-500">Justification:</span> {selection.justification}</p>
-
-          {!purchaseOrder && request?.status === 'supplier_selected' && permissions.includes('Procurement.PurchaseOrderIssue') ? (
-            <form action={issuePurchaseOrderAction} className="mt-5">
-              <input name="purchase_request_id" type="hidden" value={requestId} />
-              <input name="expected_request_version" type="hidden" value={request.version} />
-              <button className="rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-950" type="submit">Issue Purchase Order</button>
-            </form>
-          ) : null}
-        </div>
-      ) : null}
-
-      {purchaseOrder ? (
-        <div className="mt-6 border-t border-zinc-800 pt-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">Purchase Order</p>
-              <p className="mt-2 font-mono font-semibold">{purchaseOrder.orderNumber}</p>
-              <p className="mt-1 text-sm text-zinc-400">{purchaseOrder.status} · {formatMoney(purchaseOrder.total, purchaseOrder.currency)}</p>
-            </div>
-            <Link className="rounded-lg border border-zinc-700 px-4 py-2 text-sm" href={`/dashboard/purchase-orders/${purchaseOrder.id}`}>Abrir Purchase Order</Link>
+    <>
+      <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="quotations">
+        <SectionHeader
+          action={<Link className="atlas-link text-[12px]" href={`/dashboard/procurement/${requestId}/quotations`}>Abrir comparação →</Link>}
+          title="Cotações"
+        />
+        {quotations.length === 0 ? (
+          <EmptyState
+            description="As cotações poderão ser adicionadas após a aprovação da solicitação."
+            title="Nenhuma cotação registada."
+          />
+        ) : (
+          <div className="mt-3 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+            {quotations.map((quotation) => (
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-5 py-3 text-[12px]" key={quotation.id}>
+                <div>
+                  <p className="font-medium">{quotation.supplierName}</p>
+                  <p className="mt-0.5 text-[var(--text-muted)]">{quotation.quotationNumber ?? 'Sem número'}</p>
+                </div>
+                <Money currency={quotation.currency} value={quotation.total} />
+                <StatusBadge label={quotation.status} tone={quotation.status === 'accepted' ? 'success' : 'neutral'} />
+              </div>
+            ))}
           </div>
-          {receiptStatus ? <p className="mt-4 text-sm text-zinc-400">Receipt Progress: {receiptStatus.fullyReceivedItemCount}/{receiptStatus.itemCount} items completos · {receiptStatus.progressPercent}%</p> : null}
-        </div>
-      ) : null}
+        )}
 
-      <div className="mt-6 border-t border-zinc-800 pt-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Procurement Timeline</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {timeline.map((step) => <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3" key={step.label}><p className="text-sm font-medium">{step.label}</p><p className="mt-1 text-xs text-zinc-500">{step.date ? new Date(step.date).toLocaleString('pt-PT') : 'Pendente'}</p></div>)}
-        </div>
-      </div>
-    </section>
+        {selection ? (
+          <div className="mt-4 border-l-2 border-[var(--success)] pl-4 text-[12px]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--success)]">Selected Supplier</p>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+              <p className="font-medium">{selection.supplierName}</p>
+              <Money currency={selection.currency} value={selection.total} />
+              <p className="text-[var(--text-muted)]">Selecionado por {selection.selectedByName ?? 'utilizador'} em {new Date(selection.selectedAt).toLocaleString('pt-PT')}</p>
+            </div>
+            <p className="mt-2 text-[var(--text-secondary)]"><span className="text-[var(--text-muted)]">Justificação:</span> {selection.justification}</p>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="purchase-order">
+        <SectionHeader title="Ordem de compra" />
+        {purchaseOrder ? (
+          <div className="mt-3 grid grid-cols-2 gap-4 border-y border-[var(--border)] py-4 text-[12px] md:grid-cols-5">
+            <Meta label="Ordem" value={<EntityLink href={`/dashboard/purchase-orders/${purchaseOrder.id}`}>{purchaseOrder.orderNumber}</EntityLink>} />
+            <Meta label="Fornecedor" value={purchaseOrder.supplierName} />
+            <Meta label="Valor" value={<Money currency={purchaseOrder.currency} value={purchaseOrder.total} />} />
+            <Meta label="Estado" value={<StatusBadge label={purchaseOrder.status.replaceAll('_', ' ')} tone={purchaseOrder.status === 'received' ? 'success' : 'warning'} />} />
+            <Meta label="Receção" value={receiptStatus ? `${receiptStatus.fullyReceivedItemCount}/${receiptStatus.itemCount} itens completos` : 'Sem dados'} />
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border-y border-[var(--border)] py-4">
+            <p className="text-[12px] text-[var(--text-muted)]">Ainda não existe ordem de compra.</p>
+            {selection && request?.status === 'supplier_selected' && permissions.includes('Procurement.PurchaseOrderIssue') ? (
+              <form action={issuePurchaseOrderAction}>
+                <input name="purchase_request_id" type="hidden" value={requestId} />
+                <input name="expected_request_version" type="hidden" value={request.version} />
+                <button className="atlas-button atlas-button-primary" type="submit">Emitir ordem de compra</button>
+              </form>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      <section className="scroll-mt-6 border-t border-[var(--border)] pt-5" id="receipts">
+        <SectionHeader title="Receções" />
+        {receipts.length === 0 ? (
+          <p className="py-4 text-[12px] text-[var(--text-muted)]">Nenhuma receção registada.</p>
+        ) : (
+          <div className="mt-3 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+            {receipts.map((receipt) => (
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-5 py-3 text-[12px]" key={receipt.id}>
+                <span className="font-medium">{receipt.receiptNumber}</span>
+                <span className="atlas-tabular text-[var(--text-muted)]">{new Date(receipt.receivedAt).toLocaleString('pt-PT')}</span>
+                <StatusBadge label={receipt.status} tone={receipt.status === 'complete' ? 'success' : 'warning'} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   )
+}
+
+function Meta({ label, value }: { label: string; value: ReactNode }) {
+  return <div><p className="text-[10px] uppercase tracking-[0.05em] text-[var(--text-muted)]">{label}</p><div className="mt-1 text-[12px] text-[var(--text-secondary)]">{value}</div></div>
 }

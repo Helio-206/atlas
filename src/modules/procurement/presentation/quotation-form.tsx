@@ -44,7 +44,7 @@ export function QuotationForm({ purchaseRequestId, suppliers, requestItems }: Pr
   )
 
   return (
-    <form action={createQuotationAction} className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+    <form action={createQuotationAction} className="mt-5 border-t border-[var(--border)] pt-5">
       <input name="purchase_request_id" type="hidden" value={purchaseRequestId} />
       <input name="items_json" type="hidden" value={serializedItems} />
       <div className="grid gap-5 md:grid-cols-2">
@@ -58,22 +58,22 @@ export function QuotationForm({ purchaseRequestId, suppliers, requestItems }: Pr
         <label className="md:col-span-2"><span className={labelClass}>Notas</span><textarea className={inputClass} name="notes" rows={2} /></label>
       </div>
 
-      <div className="mt-7 flex items-center justify-between"><div><h3 className="font-semibold">Itens cotados</h3><p className="mt-1 text-xs text-zinc-500">Remova itens para registar uma cotação parcial.</p></div><span className="text-xs text-zinc-500">{items.length}/{requestItems.length} itens</span></div>
-      <div className="mt-4 space-y-3">
+      <div className="mt-7 flex items-center justify-between"><div><h3 className="font-medium">Itens cotados</h3><p className="mt-1 text-xs text-[var(--text-muted)]">Remova itens para registar uma cotação parcial.</p></div><span className="text-xs text-[var(--text-muted)]">{items.length}/{requestItems.length} itens</span></div>
+      <div className="mt-4 divide-y divide-[var(--border)] border-y border-[var(--border)]">
         {items.map((item) => (
-          <div className="grid items-end gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 md:grid-cols-[1fr_120px_120px_auto]" key={item.id}>
-            <div><div className="text-sm font-medium">{item.description}</div><div className="mt-1 text-xs text-zinc-500">{item.quantity} {item.unit}</div></div>
+          <div className="grid items-end gap-3 py-3 md:grid-cols-[1fr_120px_120px_auto]" key={item.id}>
+            <div><div className="text-sm font-medium">{item.description}</div><div className="mt-1 text-xs text-[var(--text-muted)]">{item.quantity} {item.unit}</div></div>
             <label><span className={labelClass}>Qtd.</span><input className={inputClass} min="0.0001" onChange={(event) => setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, quantity: Number(event.target.value) } : candidate))} step="0.0001" type="number" value={item.quantity} /></label>
             <label><span className={labelClass}>Preço unit.</span><input className={inputClass} min="0" onChange={(event) => setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, unitPrice: event.target.value } : candidate))} step="0.01" type="number" value={item.unitPrice} /></label>
-            <button className="rounded-lg border border-zinc-700 px-3 py-2.5 text-sm" onClick={() => setItems((current) => current.filter((candidate) => candidate.id !== item.id))} type="button">Remover</button>
+            <button className="atlas-button" onClick={() => setItems((current) => current.filter((candidate) => candidate.id !== item.id))} type="button">Remover</button>
           </div>
         ))}
-        {items.length === 0 ? <p className="rounded-xl border border-dashed border-zinc-800 p-5 text-sm text-zinc-500">Nenhum item incluído. Uma cotação vazia pode ser guardada como draft, mas não pode ser submetida.</p> : null}
+        {items.length === 0 ? <p className="py-5 text-sm text-[var(--text-muted)]">Nenhum item incluído. Uma cotação vazia pode ser guardada como draft, mas não pode ser submetida.</p> : null}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-800 pt-5">
-        <div className="text-sm text-zinc-400"><span>Subtotal visual: {subtotal.toLocaleString('pt-PT')} {currency}</span><span className="ml-5 font-semibold text-zinc-100">Total visual: {total.toLocaleString('pt-PT')} {currency}</span><p className="mt-1 text-xs text-zinc-600">O servidor recalcula os valores a partir das linhas.</p></div>
-        <button className="rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-zinc-950" type="submit">Registar cotação</button>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
+        <div className="text-sm text-[var(--text-secondary)]"><span>Subtotal visual: {subtotal.toLocaleString('pt-PT')} {currency}</span><span className="ml-5 font-semibold text-[var(--text-primary)]">Total visual: {total.toLocaleString('pt-PT')} {currency}</span><p className="mt-1 text-xs text-[var(--text-muted)]">O servidor recalcula os valores a partir das linhas.</p></div>
+        <button className="atlas-button atlas-button-primary" type="submit">Registar cotação</button>
       </div>
     </form>
   )
