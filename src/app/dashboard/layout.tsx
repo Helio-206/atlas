@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { AppShell } from '@/components/atlas/app-shell'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getActiveMembership } from '@/modules/identity/company-onboarding/queries'
+import { CountUnreadNotifications, ListNotifications } from '@/modules/notifications/application/notification-use-cases'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,9 +16,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const membership = await getActiveMembership()
   if (!membership) redirect('/onboarding/company')
 
-  const [{ data: company }, { data: profile }] = await Promise.all([
+  const [{ data: company }, { data: profile }, notifications, unreadCount] = await Promise.all([
     supabase.schema('identity').from('companies').select('name').eq('id', membership.company_id).maybeSingle(),
     supabase.schema('identity').from('profiles').select('full_name').maybeSingle(),
+    ListNotifications(5),
+    CountUnreadNotifications(),
   ])
 
   const email = typeof data.claims.email === 'string' ? data.claims.email : 'Utilizador'
@@ -28,6 +31,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         companyName: company?.name ?? 'Empresa atual',
         userName: profile?.full_name || email,
         role: roleLabel(membership.role),
+        roleKey: membership.role,
+      }}
+      notifications={{
+        unreadCount,
+        items: notifications.map((item) => ({ id: item.id, title: item.title, href: item.href, createdAt: item.createdAt, read: Boolean(item.readAt) })),
       }}
     >
       {children}
@@ -38,12 +46,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 function roleLabel(role: string) {
   const labels: Record<string, string> = {
     administrator: 'Administrador',
+    project_manager: 'Gestor de Projeto',
     requester: 'Solicitante',
-    technical_reviewer: 'Revisor técnico',
-    financial_reviewer: 'Revisor financeiro',
-    executive_reviewer: 'Revisor executivo',
-    procurement_officer: 'Comprador',
-    warehouse_operator: 'Operador de armazém',
+    technical_reviewer: 'Aprovador Técnico',
+    financial_approver: 'Aprovador Financeiro',
+    executive_approver: 'Diretor',
+    procurement_officer: 'Responsável de Compras',
+    warehouse_operator: 'Responsável de Armazém',
   }
   return labels[role] ?? role.replaceAll('_', ' ')
 }

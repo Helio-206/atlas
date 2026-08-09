@@ -14,6 +14,8 @@ on:
       - sprint3-suppliers-quotations
       - sprint3-suppliers-quotations-final
       - sprint4-purchase-orders-receipts
+      - sprint5-ux-application-shell
+      - sprint6-pilot-readiness
 
 permissions:
   contents: read
@@ -25,7 +27,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-22.04
-    timeout-minutes: 55
+    timeout-minutes: 60
     env:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
       SUPABASE_TELEMETRY_DISABLED: "1"
@@ -65,41 +67,47 @@ jobs:
           pnpm exec supabase db advisors --help
           pnpm exec supabase status --help
 
-      - name: Verify Sprint 4 structure
+      - name: Verify Sprint 6 structure
         run: |
-          test -f supabase/migrations/20260808162730_procurement_core.sql
-          test -f supabase/migrations/20260808185817_supplier_quotation_structures.sql
-          test -f supabase/migrations/20260808205744_fix_purchase_request_item_scope.sql
-          test -f supabase/migrations/20260808225328_purchase_order_goods_receipt.sql
-          test -f supabase/migrations/20260808230946_purchase_request_fulfillment_cancel_guard.sql
-          test -f supabase/tests/sourcing_integration.sql
-          test -f supabase/tests/sourcing_rls.sql
-          test -f supabase/tests/fulfillment_integration.sql
-          test -f supabase/tests/fulfillment_rls.sql
-          test -f src/modules/procurement/domain/fulfillment.ts
-          test -f src/modules/procurement/domain/fulfillment.test.ts
-          test -f src/modules/procurement/contracts/fulfillment-schemas.ts
-          test -f src/modules/procurement/application/fulfillment-use-cases.ts
-          test -f src/modules/procurement/infrastructure/fulfillment-repository.ts
-          test -f src/modules/procurement/presentation/fulfillment-actions.ts
-          test -f src/app/dashboard/purchase-orders/page.tsx
-          test -f 'src/app/dashboard/purchase-orders/[id]/page.tsx'
-          test -f tests/fulfillment-flow.mjs
-          test -f scripts/test-sql-contracts.mjs
+          test -f supabase/migrations/20260809160421_pilot_readiness.sql
+          test -f supabase/seed.sql
+          test -f supabase/tests/pilot_readiness_integration.sql
+          test -f supabase/tests/pilot_readiness_rls.sql
+          test -f supabase/tests/pilot_security.sql
+          test -f src/modules/documents/domain/documents.ts
+          test -f src/modules/documents/domain/documents.test.ts
+          test -f src/modules/documents/infrastructure/documents-repository.ts
+          test -f src/modules/documents/application/documents-use-cases.ts
+          test -f src/modules/documents/presentation/actions.ts
+          test -f src/modules/documents/presentation/document-section.tsx
+          test -f src/modules/notifications/infrastructure/notifications-repository.ts
+          test -f src/modules/notifications/application/notification-use-cases.ts
+          test -f src/modules/identity/admin/infrastructure/admin-repository.ts
+          test -f src/app/dashboard/users/page.tsx
+          test -f src/app/dashboard/audit/page.tsx
+          test -f scripts/demo-reset.mjs
+          test -f scripts/demo-reset-guard.mjs
+          test -f scripts/demo-reset-guard.test.mjs
+          test -f tests/demo-procurement-journey.mjs
+          test -f tests/performance-smoke.mjs
+          test -f docs/demo/procurement-demo.md
+          test -f docs/pilot/pilot-checklist.md
+          test -f docs/operations/backup-restore.md
+          test -f docs/operations/demo-environment.md
 
       - name: Verify security and scope boundaries
         run: |
-          ! grep -R 'SUPABASE_SERVICE_ROLE_KEY\|createAdminSupabaseClient' \
-            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/approvals \
-            src/app/dashboard/suppliers src/app/dashboard/purchase-orders \
-            tests/setup-procurement-e2e.mjs tests/procurement-flow.mjs tests/sourcing-flow.mjs tests/fulfillment-flow.mjs
+          ! grep -R 'SUPABASE_SERVICE_ROLE_KEY\|createAdminSupabaseClient\|service_role' \
+            src/app src/components src/modules src/platform \
+            --exclude='*.test.ts' --exclude='*.test.tsx'
           ! grep -R 'name="company_id"\|companyId:' \
-            src/modules/procurement/presentation src/app/dashboard/purchase-orders
-          if grep -R -E 'Inventory|Accounting|ERP Integration|Workflow Builder|Artificial Intelligence' \
-            src/modules/procurement src/app/dashboard/procurement src/app/dashboard/purchase-orders; then
-            echo 'Out-of-scope Sprint 4 functionality detected.' >&2
+            src/modules/procurement/presentation src/modules/documents/presentation src/app/dashboard/purchase-orders
+          if grep -R -E 'Inventory|Accounting|ERP Integration|Workflow Builder|Artificial Intelligence|MCP|Mobile app' \
+            src/modules src/app/dashboard; then
+            echo 'Out-of-scope Sprint 6 functionality detected.' >&2
             exit 1
           fi
+          ! grep -R -E 'ATLAS_DEMO_PASSWORD=.+' docs supabase src || true
 
       - name: Run lint
         run: pnpm lint
@@ -122,24 +130,28 @@ jobs:
       - name: Run integration contracts
         run: pnpm test:integration
 
-      - name: Run RLS contracts
+      - name: Run RLS and security contracts
         run: pnpm test:rls
 
-      - name: Export local Supabase application variables
+      - name: Export local Supabase application and demo variables
         run: |
           eval "$(pnpm exec supabase status -o env)"
           test -n "$API_URL"
-          if [ -n "${PUBLISHABLE_KEY:-}" ]; then
-            PUBLIC_KEY="$PUBLISHABLE_KEY"
-          else
-            PUBLIC_KEY="$ANON_KEY"
-          fi
+          test -n "$SECRET_KEY"
+          if [ -n "${PUBLISHABLE_KEY:-}" ]; then PUBLIC_KEY="$PUBLISHABLE_KEY"; else PUBLIC_KEY="$ANON_KEY"; fi
           test -n "$PUBLIC_KEY"
           echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLIC_KEY" >> "$GITHUB_ENV"
           echo "ATLAS_TEST_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
           echo "ATLAS_TEST_PUBLISHABLE_KEY=$PUBLIC_KEY" >> "$GITHUB_ENV"
+          echo "ATLAS_ENV=local" >> "$GITHUB_ENV"
+          echo "ATLAS_DEMO_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "ATLAS_DEMO_SECRET_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
+          echo "ATLAS_DEMO_PASSWORD=Atlas-CI-Pilot-2026!" >> "$GITHUB_ENV"
+
+      - name: Rebuild reproducible demo data
+        run: pnpm demo:reset
 
       - name: Build application and verify browser bundle
         run: pnpm build
@@ -163,12 +175,15 @@ jobs:
       - name: Run complete E2E suite
         run: pnpm test:e2e
 
+      - name: Run pilot performance smoke test
+        run: pnpm test:performance:smoke
+
       - name: Show Atlas application log on browser failure
         if: failure()
         run: cat /tmp/atlas-app.log || true
 
       - name: Lint database schemas
-        run: pnpm exec supabase db lint --local --schema identity,projects,procurement,audit,platform --fail-on error
+        run: pnpm exec supabase db lint --local --schema identity,projects,procurement,documents,notifications,audit,platform --fail-on error
 
       - name: Run database advisors
         run: pnpm exec supabase db advisors --local

@@ -10,6 +10,10 @@ const errors: Record<string, string> = {
   quotation_items_required: 'A cotação precisa de pelo menos um item antes de ser submetida.',
   justification_required: 'A justificação da seleção é obrigatória.',
   supplier_already_selected: 'Esta Purchase Request já possui um fornecedor selecionado.',
+  document_invalid: 'Selecione um ficheiro válido.',
+  document_type: 'Formato de documento não permitido para este registo.',
+  document_size: 'O documento deve ter no máximo 10 MB.',
+  document_failed: 'Não foi possível anexar o documento.',
   command_failed: 'Não foi possível concluir a operação.',
 }
 
@@ -23,18 +27,9 @@ const notices: Record<string, string> = {
   quotation_updated: 'Cotação atualizada.',
   quotation_submitted: 'Cotação submetida.',
   supplier_selected: 'Fornecedor selecionado formalmente.',
+  document_uploaded: 'Documento anexado.',
 }
 
-function first(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value
-}
-
-export function getSourcingError(value?: string | string[]) {
-  const key = first(value)
-  return key ? errors[key] ?? errors.command_failed : null
-}
-
-export function getSourcingNotice(value?: string | string[]) {
-  const key = first(value)
-  return key ? notices[key] ?? null : null
-}
+function first(value?: string | string[]) { return Array.isArray(value) ? value[0] : value }
+export function getSourcingError(value?: string | string[]) { const key=first(value); return key ? errors[key] ?? errors.command_failed : null }
+export function getSourcingNotice(value?: string | string[]) { const key=first(value); return key ? notices[key] ?? null : null }
