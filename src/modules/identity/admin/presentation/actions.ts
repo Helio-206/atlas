@@ -7,12 +7,18 @@ import { z } from 'zod'
 import { UpdateApprovalSettings } from '@/modules/procurement/application/use-cases'
 import { logOperationalError } from '@/platform/observability/logger'
 
-import { setCompanyMembershipStatusRepository } from '../infrastructure/admin-repository'
+import { setCompanyMembershipStatusRepository, updateDemoRequestRepository } from '../infrastructure/admin-repository'
 
 const membershipSchema = z.object({
   membershipId: z.string().uuid(),
   expectedStatus: z.enum(['active', 'suspended']),
   status: z.enum(['active', 'suspended']),
+})
+const demoRequestSchema = z.object({
+  id: z.string().uuid(),
+  expectedUpdatedAt: z.string().datetime({ offset: true }),
+  status: z.enum(['new', 'contacted', 'qualified', 'demo_scheduled', 'pilot_proposed', 'won', 'lost']),
+  internalNotes: z.string().max(4000),
 })
 
 function value(formData: FormData, key: string) {
@@ -52,4 +58,24 @@ export async function updatePilotApprovalSettingsAction(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/users')
   redirect('/dashboard/users?notice=settings_updated')
+}
+
+export async function updateDemoRequestAction(formData: FormData) {
+  const parsed = demoRequestSchema.safeParse({
+    id: value(formData, 'demo_request_id'),
+    expectedUpdatedAt: value(formData, 'expected_updated_at'),
+    status: value(formData, 'status'),
+    internalNotes: value(formData, 'internal_notes'),
+  })
+  if (!parsed.success) redirect('/dashboard/admin/demo-requests?error=invalid_form')
+
+  try {
+    await updateDemoRequestRepository(parsed.data)
+  } catch (error) {
+    logOperationalError({ operation: 'admin.demo_request_update', error })
+    redirect('/dashboard/admin/demo-requests?error=update_failed')
+  }
+
+  revalidatePath('/dashboard/admin/demo-requests')
+  redirect('/dashboard/admin/demo-requests?notice=updated')
 }

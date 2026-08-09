@@ -1,6 +1,6 @@
 # Atlas — Pilot Checklist
 
-## Empresa e acessos
+## 1. Criar Company e acessos
 
 - [ ] Empresa criada e identificada corretamente.
 - [ ] Utilizadores piloto criados.
@@ -9,14 +9,34 @@
 - [ ] Responsável do cliente identificado.
 - [ ] Canal de suporte acordado.
 
-## Dados operacionais
+## 2. Configurar operação
 
 - [ ] Projetos configurados.
 - [ ] Threshold executivo e moeda confirmados.
 - [ ] Fornecedores principais importados/criados.
 - [ ] Fluxo PR → aprovação → sourcing → PO → receção validado com dados do cliente.
 
-## Segurança
+## 3. Validar antes do go-live
+
+- [ ] Solicitação de teste criada pelo papel solicitante.
+- [ ] Aprovação técnica validada pelo aprovador técnico.
+- [ ] Aprovação financeira validada pelo aprovador financeiro.
+- [ ] Aprovação executiva validada quando o threshold se aplica.
+- [ ] Fornecedor e cotação comparados e decisão justificada pelo papel de compras.
+- [ ] Ordem de compra emitida com o papel autorizado.
+- [ ] Receção parcial/final validada pelo armazém.
+- [ ] Utilizador sem a função correta foi bloqueado.
+- [ ] Auditoria e notificações confirmadas.
+
+## 4. Go-live e revisão
+
+- [ ] Baseline do processo atual registado.
+- [ ] Data de go-live confirmada com o responsável do cliente.
+- [ ] Primeiro processo real escolhido.
+- [ ] Check-in semanal agendado.
+- [ ] Data de revisão de 30 dias agendada.
+
+## 5. Segurança
 
 - [ ] Ambiente piloto usa projeto Supabase separado de produção.
 - [ ] Ambiente piloto usa projeto Vercel/configuração separada de produção.
@@ -27,7 +47,7 @@
 - [ ] Membership suspensa perde acesso operacional.
 - [ ] Reset demo/piloto não aponta para produção.
 
-## Operações
+## 6. Operações
 
 - [ ] Storage funcional com PDF/PNG/JPEG e limite de 10 MB.
 - [ ] Notificações in-app funcionais.

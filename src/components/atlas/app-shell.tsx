@@ -59,6 +59,7 @@ const groups: Array<{ label?: string; items: NavItem[] }> = [
   {
     label: 'Administração',
     items: [
+      { href: '/dashboard/admin/demo-requests', label: 'Pedidos de demo', icon: ClipboardText, adminOnly: true },
       { href: '/dashboard/users', label: 'Utilizadores', icon: Users, adminOnly: true },
       { href: '/dashboard/audit', label: 'Auditoria', icon: ShieldCheck, adminOnly: true },
     ],
