@@ -1,0 +1,5 @@
+-- Atlas intentionally keeps the default database seed side-effect free.
+-- Pilot/demo users require Supabase Auth administration, so reproducible demo
+-- data is rebuilt explicitly with `pnpm demo:reset` after migrations.
+-- This prevents local `supabase db reset` from silently installing demo
+-- credentials or data into an environment that was not classified as demo/local.

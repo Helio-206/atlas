@@ -10,6 +10,8 @@ import {
   SectionHeader,
   StatusBadge,
 } from '@/components/atlas/ui'
+import { ListResourceDocuments } from '@/modules/documents/application/documents-use-cases'
+import { DocumentSection } from '@/modules/documents/presentation/document-section'
 import {
   GetPurchaseRequest,
   ListPurchaseRequestItems,
@@ -22,9 +24,7 @@ import {
 } from '@/modules/procurement/application/sourcing-use-cases'
 import { requireProcurementAccess } from '@/modules/procurement/presentation/access'
 import { QuotationForm } from '@/modules/procurement/presentation/quotation-form'
-import {
-  submitQuotationAction,
-} from '@/modules/procurement/presentation/sourcing-actions'
+import { submitQuotationAction } from '@/modules/procurement/presentation/sourcing-actions'
 import { getSourcingError, getSourcingNotice } from '@/modules/procurement/presentation/sourcing-feedback'
 import { SupplierSelectionPanel } from '@/modules/procurement/presentation/supplier-selection-panel'
 
@@ -50,14 +50,18 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
   ])
   if (!request) notFound()
 
-  const quotationItems = await Promise.all(
-    comparison.quotations.map(async (quotation) => [quotation.id, await ListQuotationItems(quotation.id)] as const),
-  )
+  const [quotationItems, quotationDocuments] = await Promise.all([
+    Promise.all(comparison.quotations.map(async (quotation) => [quotation.id, await ListQuotationItems(quotation.id)] as const)),
+    Promise.all(comparison.quotations.map(async (quotation) => [quotation.id, await ListResourceDocuments('quotation', quotation.id)] as const)),
+  ])
   const itemMap = new Map(quotationItems)
+  const documentMap = new Map(quotationDocuments)
   const error = getSourcingError(query.error)
   const notice = getSourcingNotice(query.notice)
   const canManageQuotation = access.can('Procurement.QuotationManage') && request.status === 'approved'
+  const canUploadQuotationDocument = access.can('Procurement.QuotationManage')
   const canSelect = access.can('Procurement.SupplierSelect') && request.status === 'approved' && !selection
+  const returnTo = `/dashboard/procurement/${request.id}/quotations`
 
   return (
     <main>
@@ -117,11 +121,9 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
               <ComparisonRow label="Moeda">{comparison.quotations.map((quotation) => <Cell key={quotation.id}>{quotation.currency}</Cell>)}</ComparisonRow>
             </tbody>
           </DataTable>
-          {comparison.quotations.length === 0 ? <p className="py-8 text-center text-[12px] text-[var(--text-muted)]">Ainda não existem cotações.</p> : null}
+          {comparison.quotations.length === 0 ? <p className="py-8 text-center text-[12px] text-[var(--text-muted)]">Ainda não existem cotações. Registe a primeira cotação para comparar fornecedores.</p> : null}
         </div>
-        {!comparison.highlights.sameCurrency ? (
-          <p className="mt-2 border-l-2 border-[var(--warning)] pl-3 text-[11px] leading-5 text-[var(--text-secondary)]">As cotações estão em moedas diferentes e não podem ser comparadas diretamente sem taxa de câmbio.</p>
-        ) : null}
+        {!comparison.highlights.sameCurrency ? <p className="mt-2 border-l-2 border-[var(--warning)] pl-3 text-[11px] leading-5 text-[var(--text-secondary)]">As cotações estão em moedas diferentes e não podem ser comparadas diretamente sem taxa de câmbio.</p> : null}
       </section>
 
       {comparison.quotations.length ? (
@@ -135,6 +137,18 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
           </div>
         </section>
       ) : null}
+
+      {comparison.quotations.map((quotation) => (
+        <DocumentSection
+          canUpload={canUploadQuotationDocument}
+          documents={documentMap.get(quotation.id) ?? []}
+          key={`documents-${quotation.id}`}
+          resourceId={quotation.id}
+          resourceType="quotation"
+          returnTo={returnTo}
+          title={`Documento · ${quotation.supplierName} · ${quotation.quotationNumber ?? 'cotação'}`}
+        />
+      ))}
 
       {selection ? (
         <section className="mt-5 border-l-2 border-[var(--success)] pl-4">
@@ -156,18 +170,7 @@ export default async function QuotationsPage({ params, searchParams }: Props) {
   )
 }
 
-function Context({ label, value }: { label: string; value: ReactNode }) {
-  return <div className="border-r border-[var(--border)] px-5 py-4 last:border-r-0"><p className="text-[10px] text-[var(--text-muted)]">{label}</p><div className="mt-1 text-[13px] font-medium">{value}</div></div>
-}
-
-function ComparisonRow({ label, children }: { label: string; children: ReactNode }) {
-  return <tr><th className="px-3 py-3 font-normal text-[var(--text-secondary)]">{label}</th>{children}</tr>
-}
-
-function Cell({ children }: { children: ReactNode }) {
-  return <td className="px-3 py-3 text-center align-top">{children}</td>
-}
-
-function Highlight({ children }: { children: ReactNode }) {
-  return <span className="mt-0.5 block text-[10px] text-[var(--success)]">{children}</span>
-}
+function Context({ label, value }: { label: string; value: ReactNode }) { return <div className="border-r border-[var(--border)] px-5 py-4 last:border-r-0"><p className="text-[10px] text-[var(--text-muted)]">{label}</p><div className="mt-1 text-[13px] font-medium">{value}</div></div> }
+function ComparisonRow({ label, children }: { label: string; children: ReactNode }) { return <tr><th className="px-3 py-3 font-normal text-[var(--text-secondary)]">{label}</th>{children}</tr> }
+function Cell({ children }: { children: ReactNode }) { return <td className="px-3 py-3 text-center align-top">{children}</td> }
+function Highlight({ children }: { children: ReactNode }) { return <span className="mt-0.5 block text-[10px] text-[var(--success)]">{children}</span> }
