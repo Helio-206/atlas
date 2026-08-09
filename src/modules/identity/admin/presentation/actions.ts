@@ -16,9 +16,10 @@ const membershipSchema = z.object({
 })
 const demoRequestSchema = z.object({
   id: z.string().uuid(),
-  expectedUpdatedAt: z.string().datetime({ offset: true }),
+  expectedVersion: z.coerce.number().int().positive(),
   status: z.enum(['new', 'contacted', 'qualified', 'demo_scheduled', 'pilot_proposed', 'won', 'lost']),
   internalNotes: z.string().max(4000),
+  pilotActive: z.boolean(),
 })
 
 function value(formData: FormData, key: string) {
@@ -63,19 +64,24 @@ export async function updatePilotApprovalSettingsAction(formData: FormData) {
 export async function updateDemoRequestAction(formData: FormData) {
   const parsed = demoRequestSchema.safeParse({
     id: value(formData, 'demo_request_id'),
-    expectedUpdatedAt: value(formData, 'expected_updated_at'),
+    expectedVersion: value(formData, 'expected_version'),
     status: value(formData, 'status'),
     internalNotes: value(formData, 'internal_notes'),
+    pilotActive: formData.get('pilot_active') === 'on',
   })
   if (!parsed.success) redirect('/dashboard/admin/demo-requests?error=invalid_form')
 
+  let version: number
   try {
-    await updateDemoRequestRepository(parsed.data)
+    version = await updateDemoRequestRepository({
+      ...parsed.data,
+      pilotActive: parsed.data.status === 'won' && parsed.data.pilotActive,
+    })
   } catch (error) {
     logOperationalError({ operation: 'admin.demo_request_update', error })
     redirect('/dashboard/admin/demo-requests?error=update_failed')
   }
 
   revalidatePath('/dashboard/admin/demo-requests')
-  redirect('/dashboard/admin/demo-requests?notice=updated')
+  redirect(`/dashboard/admin/demo-requests?notice=updated&version=${version}`)
 }

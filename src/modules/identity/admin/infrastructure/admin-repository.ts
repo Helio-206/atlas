@@ -22,7 +22,12 @@ const demoRequestSchema = z.object({
   id: z.string().uuid(), name: z.string(), company: z.string(), role: z.string(),
   email: z.string().email(), phone: z.string(), message: z.string().nullable(),
   status: z.enum(['new', 'contacted', 'qualified', 'demo_scheduled', 'pilot_proposed', 'won', 'lost']),
-  internal_notes: z.string().nullable(), created_at: z.string(), updated_at: z.string(),
+  internal_notes: z.string().nullable(), pilot_active: z.boolean(), version: z.number().int().positive(), created_at: z.string(), updated_at: z.string(),
+})
+const demoRequestMetricsSchema = z.object({
+  new_leads: z.number().int().nonnegative(), demos_scheduled: z.number().int().nonnegative(),
+  pilots_proposed: z.number().int().nonnegative(), pilots_active: z.number().int().nonnegative(),
+  won: z.number().int().nonnegative(), lost: z.number().int().nonnegative(),
 })
 
 function assertResult(error: { code?: string; message?: string } | null) {
@@ -71,6 +76,8 @@ export async function listDemoRequestsRepository(maxItems = 100) {
     message: row.message,
     status: row.status,
     internalNotes: row.internal_notes,
+    pilotActive: row.pilot_active,
+    version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }))
@@ -78,16 +85,41 @@ export async function listDemoRequestsRepository(maxItems = 100) {
 
 export async function updateDemoRequestRepository(input: {
   id: string
-  expectedUpdatedAt: string
+  expectedVersion: number
   status: string
   internalNotes: string
+  pilotActive: boolean
 }) {
   const supabase = await createServerSupabaseClient()
-  const { error } = await supabase.rpc('update_demo_request', {
+  const { data, error } = await supabase.rpc('update_demo_request', {
     p_id: input.id,
-    p_expected_updated_at: input.expectedUpdatedAt,
+    p_expected_version: input.expectedVersion,
     p_status: input.status,
     p_internal_notes: input.internalNotes || null,
+    p_pilot_active: input.pilotActive,
   })
   assertResult(error)
+  return z.number().int().positive().parse(data)
+}
+
+export async function getDemoRequestMetricsRepository() {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase.rpc('get_demo_request_metrics')
+  assertResult(error)
+  const metrics = demoRequestMetricsSchema.parse(data?.[0])
+  return {
+    newLeads: metrics.new_leads,
+    demosScheduled: metrics.demos_scheduled,
+    pilotsProposed: metrics.pilots_proposed,
+    pilotsActive: metrics.pilots_active,
+    won: metrics.won,
+    lost: metrics.lost,
+  }
+}
+
+export async function canManageDemoRequestsRepository() {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase.rpc('can_manage_demo_requests')
+  assertResult(error)
+  return data === true
 }

@@ -11,6 +11,8 @@
 
 RLS/contracts cover Projects, Purchase Requests/items, Approvals, Suppliers, Quotations, Supplier Selections, Purchase Orders, Goods Receipts, Documents and Notifications. Document object authorization re-validates the resource tenant rather than trusting a browser-supplied company id.
 
+Demo requests are platform-level commercial data, not tenant data. Access requires an active `platform.staff_users` assignment with role `commercial_admin`; an `administrator` membership in any company does not grant access. Lead updates use integer optimistic concurrency and append an immutable event containing the actor, status transition and resulting version.
+
 ## RPCs
 
 Pilot CI inspects all `SECURITY DEFINER` functions in `platform`, `documents` and `notifications` and fails if an explicit `search_path` is absent. Privileged commands derive company from the authenticated session and use permission checks. Existing optimistic-concurrency guards remain in procurement/sourcing/fulfillment commands.
@@ -29,6 +31,8 @@ Pilot CI inspects all `SECURITY DEFINER` functions in `platform`, `documents` an
 ## Demo reset
 
 `pnpm demo:reset` is service-key tooling, not application functionality. The command refuses `ATLAS_ENV=production`, requires loopback for local mode, and requires explicit reset confirmation plus project-ref/hostname agreement for a hosted Demo project.
+
+The reset provisions only `admin@atlas.demo` as demo commercial staff. Production commercial-staff assignments must be made through controlled service-role operations and must never be exposed to tenant administrators.
 
 ## Error handling and observability
 

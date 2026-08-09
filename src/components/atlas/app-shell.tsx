@@ -26,6 +26,7 @@ type Identity = {
   userName: string
   role: string
   roleKey: string
+  canManageDemoRequests: boolean
 }
 
 type ShellNotification = {
@@ -42,6 +43,7 @@ type NavItem = {
   icon: typeof House
   match?: (pathname: string) => boolean
   adminOnly?: boolean
+  commercialOnly?: boolean
 }
 
 const groups: Array<{ label?: string; items: NavItem[] }> = [
@@ -59,7 +61,7 @@ const groups: Array<{ label?: string; items: NavItem[] }> = [
   {
     label: 'Administração',
     items: [
-      { href: '/dashboard/admin/demo-requests', label: 'Pedidos de demo', icon: ClipboardText, adminOnly: true },
+      { href: '/dashboard/admin/demo-requests', label: 'Pedidos de demo', icon: ClipboardText, commercialOnly: true },
       { href: '/dashboard/users', label: 'Utilizadores', icon: Users, adminOnly: true },
       { href: '/dashboard/audit', label: 'Auditoria', icon: ShieldCheck, adminOnly: true },
     ],
@@ -115,6 +117,7 @@ function Sidebar({ identity, notifications, notificationsOpen, onClose, onNotifi
               {group.items.map((item) => {
                 const active = item.match ? item.match(pathname) : pathname.startsWith(item.href)
                 const Icon = item.icon
+                if (item.commercialOnly && !identity.canManageDemoRequests) return null
                 const disabled = item.adminOnly && identity.roleKey !== 'administrator'
                 if (disabled) return <span aria-disabled="true" className="relative flex min-h-[42px] cursor-not-allowed items-center gap-3 px-4 py-2.5 text-[13px] text-[var(--text-muted)]" key={item.href}><Icon aria-hidden size={17} weight="regular" /><span>{item.label}</span></span>
                 return <Link aria-current={active ? 'page' : undefined} className={`relative flex min-h-[42px] items-center gap-3 px-4 py-2.5 text-[13px] ${active ? 'font-medium text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`} data-atlas-active={active ? 'navigation' : undefined} data-atlas-motion-link href={item.href} key={item.href} onClick={onClose}>{active ? <span className="absolute -left-5 h-7 w-px bg-[var(--accent)]" /> : null}<Icon aria-hidden size={17} weight="regular" /><span>{item.label}</span></Link>

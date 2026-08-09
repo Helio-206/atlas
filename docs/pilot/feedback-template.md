@@ -30,3 +30,16 @@ Preencher em entrevistas curtas durante o piloto e na revisão final. Separar ob
 - Evidência observada:
 - Responsável pelo follow-up:
 - Data do follow-up:
+
+## Classificação de issues do piloto
+
+Registar cada ocorrência separadamente. Um pedido do cliente é evidência para triagem, não entrada automática no roadmap.
+
+| Data | Evidência | Severidade | Tipo | Impacto | Responsável | Decisão |
+|---|---|---|---|---|---|---|
+|  |  | critical / high / medium / low | bug / ux / missing-rule / feature-request / training |  |  |  |
+
+- `critical`: impede a operação piloto ou compromete segurança/dados.
+- `high`: bloqueia uma etapa principal sem alternativa aceitável.
+- `medium`: causa fricção relevante, mas existe alternativa operacional.
+- `low`: impacto limitado ou melhoria de conveniência.

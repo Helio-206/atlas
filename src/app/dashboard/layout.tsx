@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { AppShell } from '@/components/atlas/app-shell'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getActiveMembership } from '@/modules/identity/company-onboarding/queries'
+import { canManageDemoRequestsRepository } from '@/modules/identity/admin/infrastructure/admin-repository'
 import { CountUnreadNotifications, ListNotifications } from '@/modules/notifications/application/notification-use-cases'
 
 export const dynamic = 'force-dynamic'
@@ -16,11 +17,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const membership = await getActiveMembership()
   if (!membership) redirect('/onboarding/company')
 
-  const [{ data: company }, { data: profile }, notifications, unreadCount] = await Promise.all([
+  const [{ data: company }, { data: profile }, notifications, unreadCount, canManageDemoRequests] = await Promise.all([
     supabase.schema('identity').from('companies').select('name').eq('id', membership.company_id).maybeSingle(),
     supabase.schema('identity').from('profiles').select('full_name').maybeSingle(),
     ListNotifications(5),
     CountUnreadNotifications(),
+    canManageDemoRequestsRepository(),
   ])
 
   const email = typeof data.claims.email === 'string' ? data.claims.email : 'Utilizador'
@@ -32,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         userName: profile?.full_name || email,
         role: roleLabel(membership.role),
         roleKey: membership.role,
+        canManageDemoRequests,
       }}
       notifications={{
         unreadCount,

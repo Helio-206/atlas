@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation'
 
 import { DataTable, PageHeader, StatusBadge } from '@/components/atlas/ui'
-import { listDemoRequestsRepository } from '@/modules/identity/admin/infrastructure/admin-repository'
+import { canManageDemoRequestsRepository, getDemoRequestMetricsRepository, listDemoRequestsRepository } from '@/modules/identity/admin/infrastructure/admin-repository'
 import { updateDemoRequestAction } from '@/modules/identity/admin/presentation/actions'
 import { requireProcurementAccess } from '@/modules/procurement/presentation/access'
 
 export const dynamic = 'force-dynamic'
 
-type Props = { searchParams: Promise<{ error?: string | string[]; notice?: string | string[] }> }
+type Props = { searchParams: Promise<{ error?: string | string[]; notice?: string | string[]; version?: string | string[] }> }
 
 const statuses = [
   ['new', 'Novo'],
@@ -20,12 +20,20 @@ const statuses = [
 ] as const
 
 export default async function DemoRequestsPage({ searchParams }: Props) {
-  const access = await requireProcurementAccess()
-  if (access.membership.role !== 'administrator') notFound()
+  await requireProcurementAccess()
+  if (!await canManageDemoRequestsRepository()) notFound()
 
-  const [requests, query] = await Promise.all([listDemoRequestsRepository(), searchParams])
+  const [requests, commercialMetrics, query] = await Promise.all([listDemoRequestsRepository(), getDemoRequestMetricsRepository(), searchParams])
   const error = first(query.error)
   const notice = first(query.notice)
+  const metrics = [
+    ['Novos leads', commercialMetrics.newLeads],
+    ['Demos agendadas', commercialMetrics.demosScheduled],
+    ['Pilotos propostos', commercialMetrics.pilotsProposed],
+    ['Pilotos ativos', commercialMetrics.pilotsActive],
+    ['Ganhos', commercialMetrics.won],
+    ['Perdidos', commercialMetrics.lost],
+  ] as const
 
   return (
     <main>
@@ -35,6 +43,15 @@ export default async function DemoRequestsPage({ searchParams }: Props) {
       />
       {error ? <div className="atlas-notice atlas-notice-error mt-4" role="alert">Não foi possível guardar este pedido.</div> : null}
       {notice ? <div className="atlas-notice mt-4" role="status">Pedido atualizado.</div> : null}
+
+      <section aria-label="Métricas comerciais" className="mt-5 grid grid-cols-2 border-y border-[var(--border)] md:grid-cols-3 xl:grid-cols-6">
+        {metrics.map(([label, value]) => (
+          <div className="border-r border-[var(--border)] px-4 py-3 last:border-r-0" key={label}>
+            <p className="text-[11px] text-[var(--text-muted)]">{label}</p>
+            <p className="atlas-tabular mt-1 text-[20px] font-medium">{value}</p>
+          </div>
+        ))}
+      </section>
 
       <section className="mt-5" data-atlas-motion="paper">
         <DataTable minWidth={1320} surface="paper">
@@ -68,13 +85,17 @@ export default async function DemoRequestsPage({ searchParams }: Props) {
                 <td className="px-3 py-3 align-top">
                   <form action={updateDemoRequestAction} className="space-y-2" id={`demo-request-${request.id}`}>
                     <input name="demo_request_id" type="hidden" value={request.id} />
-                    <input name="expected_updated_at" type="hidden" value={request.updatedAt} />
+                    <input name="expected_version" type="hidden" value={request.version} />
                     <label className="sr-only" htmlFor={`status-${request.id}`}>Estado de {request.name}</label>
                     <select className="atlas-input w-full" defaultValue={request.status} id={`status-${request.id}`} name="status">
                       {statuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                     <label className="sr-only" htmlFor={`notes-${request.id}`}>Notas internas de {request.name}</label>
                     <textarea className="atlas-input min-h-16 w-full resize-y" defaultValue={request.internalNotes ?? ''} id={`notes-${request.id}`} maxLength={4000} name="internal_notes" placeholder="Nota interna" rows={2} />
+                    <label className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+                      <input defaultChecked={request.pilotActive} name="pilot_active" type="checkbox" />
+                      Piloto ativo (requer estado Ganho)
+                    </label>
                   </form>
                 </td>
                 <td className="px-3 py-3 text-right align-top">

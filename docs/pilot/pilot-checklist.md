@@ -6,6 +6,7 @@
 - [ ] Utilizadores piloto criados.
 - [ ] Papéis atribuídos: administrador, projeto, solicitante, revisores/aprovadores, compras e armazém.
 - [ ] Memberships ativas apenas para utilizadores autorizados.
+- [ ] Staff comercial global atribuído separadamente; administradores tenant não acedem a leads.
 - [ ] Responsável do cliente identificado.
 - [ ] Canal de suporte acordado.
 

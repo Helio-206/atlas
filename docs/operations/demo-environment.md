@@ -50,6 +50,9 @@ A secret/service key usada pelo processo de reset não deve ser uma variável `N
 
 1. confirma o ambiente;
 2. cria/normaliza exclusivamente as contas `@atlas.demo`;
-3. reconstrói a Construtora Horizonte e entidades demo coerentes;
-4. repõe documentos de demonstração no bucket privado;
-5. pode ser executado repetidamente sem acumular o fluxo demo.
+3. atribui `commercial_admin` apenas a `admin@atlas.demo` no registo privado de staff da plataforma;
+4. reconstrói a Construtora Horizonte e entidades demo coerentes;
+5. repõe documentos de demonstração no bucket privado;
+6. pode ser executado repetidamente sem acumular o fluxo demo.
+
+O papel tenant `administrator` não autoriza acesso aos pedidos de demonstração. Em ambientes hospedados, qualquer atribuição de staff comercial deve ser executada como operação controlada com service role, fora do browser e fora das funções disponíveis a utilizadores autenticados.

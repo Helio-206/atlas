@@ -86,6 +86,8 @@ async function seedDocument(resourceType, resourceId, filename, uploaderEmail) {
 
 try {
   await ensureUsers()
+  const { error: commercialAdminError } = await client.rpc('configure_commercial_admin', { p_email: 'admin@atlas.demo' })
+  if (commercialAdminError) throw new Error(`demo_commercial_admin_failed:${commercialAdminError.code ?? 'unknown'}`)
   const { error } = await client.rpc('seed_atlas_demo_data')
   if (error) throw new Error(`demo_seed_failed:${error.code ?? 'unknown'}:${error.message}`)
   await seedDocument('quotation', 'd4000000-0000-4000-8000-000000000081', 'Cotacao-NovaBetao-NB-2026-418.pdf', 'procurement@atlas.demo')
