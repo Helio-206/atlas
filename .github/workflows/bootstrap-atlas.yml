@@ -17,6 +17,8 @@ on:
       - sprint5-ux-application-shell
       - sprint6-pilot-readiness
       - sprint7-public-landing
+      - sprint8-commercial-launch
+      - develop
 
 permissions:
   contents: read
